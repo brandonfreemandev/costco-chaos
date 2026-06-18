@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import * as THREE from 'three';
+import { PLAYER_SPAWN } from '../components/scene/parkingLotLayout';
 
 interface CartTransformStore {
   position: THREE.Vector3;
@@ -9,8 +10,8 @@ interface CartTransformStore {
 }
 
 export const useCartTransformStore = create<CartTransformStore>((set) => ({
-  position: new THREE.Vector3(0, 0.9, 32),
-  yaw: 0,
+  position: new THREE.Vector3(PLAYER_SPAWN.x, 0.9, PLAYER_SPAWN.z),
+  yaw: PLAYER_SPAWN.yaw,
   speed: 0,
   setTransform: (position, yaw, speed) => set({ position: position.clone(), yaw, speed }),
 }));

@@ -37,8 +37,8 @@ export const MAIN_DRIVE = {
   maxX: 4.5,
 } as const;
 
-/** Start near the crosswalk gauntlet — cart in hand, chaos immediately. */
-export const PLAYER_SPAWN = { x: 0, z: -8, yaw: 0 } as const;
+/** Start in the main drive, south of the crosswalk gauntlet (crosswalk z ≈ -27). */
+export const PLAYER_SPAWN = { x: 0, z: 18, yaw: 0 } as const;
 
 /** Abandoned carts and corral clutter on the approach to the entrance. */
 export const APPROACH_CART_OBSTACLES = [
