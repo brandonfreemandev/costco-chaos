@@ -24,8 +24,8 @@ export function EnterGate() {
           Click to Enter Warehouse
         </button>
         <p className="enter-fine-print">
-          Use W/A/S/D or arrow keys to push cart. Secure the green parking spot without
-          losing all Compliance Index.
+          ↑↓ or W/S to push cart. ←→ or A/D to steer. Cross the crosswalk and enter
+          the warehouse doors ahead. You should hear a chime and cart squeak when moving.
         </p>
       </div>
     </div>

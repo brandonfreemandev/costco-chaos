@@ -13,14 +13,12 @@ export const useUIStore = create<UIStore>((set) => ({
 
   triggerVisionBlur: (severity) => {
     set({
-      visionBlur: Math.min(1, severity / 15),
+      visionBlur: Math.min(6, severity * 0.35),
       lastCollisionMessage: `INCIDENT LOGGED — impact severity ${severity.toFixed(1)}`,
     });
     window.setTimeout(() => {
-      set((state) => ({
-        visionBlur: Math.max(0, state.visionBlur - 0.15),
-      }));
-    }, 120);
+      set({ visionBlur: 0 });
+    }, 280);
   },
 
   clearCollisionMessage: () => set({ lastCollisionMessage: null }),

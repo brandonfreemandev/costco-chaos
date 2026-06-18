@@ -1,34 +1,36 @@
-import { useEffect, type MutableRefObject } from 'react';
-import * as THREE from 'three';
+import { useEffect } from 'react';
 import { usePlayerStore } from '../../stores/playerStore';
 import { useGameStore } from '../../stores/gameStore';
+import { useCartTransformStore } from '../../stores/cartTransformStore';
+import { ENTRANCE_ZONE } from './parkingLotLayout';
 
-interface ParkingSpotSensorProps {
-  cartPosition: MutableRefObject<THREE.Vector3 | null>;
-}
-
-export function ParkingSpotSensor({ cartPosition }: ParkingSpotSensorProps) {
-  const secureParkingSpot = useGameStore((s) => s.secureParkingSpot);
+export function ParkingSpotSensor() {
+  const enterWarehouse = useGameStore((s) => s.secureParkingSpot);
   const parkingSpotSecured = useGameStore((s) => s.parkingSpotSecured);
+  const phase = useGameStore((s) => s.phase);
 
   useEffect(() => {
+    if (phase !== 'PARKING' || parkingSpotSecured) return;
+
     const interval = window.setInterval(() => {
-      if (parkingSpotSecured) return;
-      const position = cartPosition.current;
-      if (!position) return;
+      const position = useCartTransformStore.getState().position;
+      const { velocity } = usePlayerStore.getState().cartPhysics;
+      const speed = Math.hypot(velocity.x, velocity.z);
 
-      const inSpot =
-        Math.abs(position.x) < 2.2 &&
-        Math.abs(position.z) < 3.5 &&
-        Math.hypot(usePlayerStore.getState().cartPhysics.velocity.x, usePlayerStore.getState().cartPhysics.velocity.z) < 1.2;
+      const inEntrance =
+        position.x >= ENTRANCE_ZONE.minX &&
+        position.x <= ENTRANCE_ZONE.maxX &&
+        position.z >= ENTRANCE_ZONE.minZ &&
+        position.z <= ENTRANCE_ZONE.maxZ &&
+        speed <= ENTRANCE_ZONE.maxSpeed;
 
-      if (inSpot) {
-        secureParkingSpot();
+      if (inEntrance) {
+        enterWarehouse();
       }
     }, 200);
 
     return () => window.clearInterval(interval);
-  }, [cartPosition, parkingSpotSecured, secureParkingSpot]);
+  }, [phase, parkingSpotSecured, enterWarehouse]);
 
   return null;
 }

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { GamePhase } from '../types/state';
+import { usePlayerStore } from './playerStore';
 
 interface GameStore {
   phase: GamePhase;
@@ -42,8 +43,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   secureParkingSpot: () => {
     if (get().parkingSpotSecured) return;
-    logTransition('Parking spot secured');
-    set({ parkingSpotSecured: true });
+    logTransition('Entered Costco warehouse -> SHOPPING');
+    set({ parkingSpotSecured: true, phase: 'SHOPPING' });
+    usePlayerStore.getState().setZone('AISLES');
   },
 
   reset: () => {

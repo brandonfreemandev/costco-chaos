@@ -1,25 +1,66 @@
 import { create } from 'zustand';
-import type { CartPhysics, PlayerState, StoreZone } from '../types/state';
+import type { CartPhysics, PlayerState, ShoppingListItem, StoreZone } from '../types/state';
 
 interface PlayerStore extends PlayerState {
   damageMentalHealth: (amount: number) => void;
   restoreMentalHealth: (amount: number) => void;
   setCartPhysics: (cartPhysics: Partial<CartPhysics>) => void;
   setZone: (zone: StoreZone) => void;
+  collectItem: (itemId: string) => void;
   reset: () => void;
 }
 
-const initialState: PlayerState = {
-  mentalHealth: 100,
-  inventory: {
-    itemsRemaining: 0,
+const SHOPPING_ITEMS: ShoppingListItem[] = [
+  {
+    id: 'item-meat',
+    sku: '482910',
+    name: 'Chicken Breast 12lb x4',
+    aisle: 'Aisle 501 (Meat)',
+    category: 'meat',
+    collected: false,
+  },
+  {
+    id: 'item-bakery',
+    sku: '119044',
+    name: 'Muffin Assortment 24ct',
+    aisle: 'Aisle 310 (Bakery)',
+    category: 'bakery',
+    collected: false,
+  },
+  {
+    id: 'item-electronics',
+    sku: '990221',
+    name: '65" LED Display Bundle',
+    aisle: 'Aisle 120 (Electronics)',
+    category: 'electronics',
+    collected: false,
+  },
+  {
+    id: 'item-paper',
+    sku: '330118',
+    name: 'Bath Tissue 30-Roll Pallet',
+    aisle: 'Aisle 214 (Bulk Paper)',
+    category: 'bulkPaper',
+    collected: false,
+  },
+];
+
+function buildInventory() {
+  return {
+    itemsRemaining: SHOPPING_ITEMS.length,
+    items: SHOPPING_ITEMS.map((item) => ({ ...item })),
     categories: {
       meat: false,
       bakery: false,
       electronics: false,
       bulkPaper: false,
     },
-  },
+  };
+}
+
+const initialState: PlayerState = {
+  mentalHealth: 100,
+  inventory: buildInventory(),
   cartPhysics: {
     velocity: { x: 0, y: 0, z: 0 },
     momentum: 0,
@@ -57,5 +98,25 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
 
   setZone: (zone) => set({ currentZone: zone }),
 
-  reset: () => set(initialState),
+  collectItem: (itemId) => {
+    set((state) => {
+      const items = state.inventory.items.map((item) =>
+        item.id === itemId ? { ...item, collected: true } : item,
+      );
+      const collected = items.find((item) => item.id === itemId);
+      const categories = collected
+        ? { ...state.inventory.categories, [collected.category]: true }
+        : state.inventory.categories;
+
+      return {
+        inventory: {
+          items,
+          categories,
+          itemsRemaining: items.filter((item) => !item.collected).length,
+        },
+      };
+    });
+  },
+
+  reset: () => set({ ...initialState, inventory: buildInventory() }),
 }));

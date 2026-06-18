@@ -6,6 +6,17 @@ export type NPCArchetype = 'BLOCKER' | 'AGGRESSOR' | 'SAMPLE_HUNTER';
 
 export type NPCBehaviorState = 'WANDERING' | 'TARGETING_SAMPLE' | 'IN_LINE';
 
+export type ShoppingCategory = 'meat' | 'bakery' | 'electronics' | 'bulkPaper';
+
+export interface ShoppingListItem {
+  id: string;
+  sku: string;
+  name: string;
+  aisle: string;
+  category: ShoppingCategory;
+  collected: boolean;
+}
+
 export interface CartPhysics {
   velocity: { x: number; y: number; z: number };
   momentum: number;
@@ -14,12 +25,8 @@ export interface CartPhysics {
 
 export interface ShoppingList {
   itemsRemaining: number;
-  categories: {
-    meat: boolean;
-    bakery: boolean;
-    electronics: boolean;
-    bulkPaper: boolean;
-  };
+  items: ShoppingListItem[];
+  categories: Record<ShoppingCategory, boolean>;
 }
 
 export interface PlayerState {

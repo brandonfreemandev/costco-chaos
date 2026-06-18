@@ -1,16 +1,18 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { RigidBody, type RapierRigidBody, interactionGroups } from '@react-three/rapier';
 import * as THREE from 'three';
-import { useCartInput } from '../../hooks/useCartInput';
+import { useCartInput, getCartInput } from '../../hooks/useCartInput';
 import { usePlayerStore } from '../../stores/playerStore';
 import { useGameStore } from '../../stores/gameStore';
+import { useCartTransformStore } from '../../stores/cartTransformStore';
 import { spatialAudio } from '../../audio/spatialAudioManager';
 import { COLLISION_GROUP } from '../../types/state';
 import {
   ACCEL,
   ANGULAR_DAMPING,
   BASE_MASS,
+  CART_HEIGHT,
   getCartMass,
   LINEAR_DAMPING,
   MAX_SPEED,
@@ -19,58 +21,104 @@ import {
 } from '../../systems/physicsController';
 import { handleCollision } from '../../systems/handleCollision';
 
-const forward = new THREE.Vector3();
-const impulse = new THREE.Vector3();
+const yawQuat = new THREE.Quaternion();
+const euler = new THREE.Euler(0, 0, 0, 'YXZ');
+const positionVec = new THREE.Vector3();
 
-interface ShoppingCartProps {
-  onPositionChange?: (position: THREE.Vector3) => void;
+import {
+  PLAYER_SPAWN,
+  WAREHOUSE_INTERIOR_SPAWN,
+} from './parkingLotLayout';
+
+const SPAWN = {
+  PARKING: PLAYER_SPAWN,
+  SHOPPING: WAREHOUSE_INTERIOR_SPAWN,
+} as const;
+
+function isActivePhase(phase: string) {
+  return phase === 'PARKING' || phase === 'SHOPPING';
 }
 
-export function ShoppingCart({ onPositionChange }: ShoppingCartProps) {
+export function ShoppingCart() {
   const bodyRef = useRef<RapierRigidBody>(null);
-  const input = useCartInput();
+  useCartInput();
   const mass = usePlayerStore((s) => s.cartPhysics.mass);
   const inventoryWeight = usePlayerStore((s) => s.inventory.itemsRemaining * 4);
   const phase = useGameStore((s) => s.phase);
   const lastCollisionAt = useRef(0);
+  const yawRef = useRef(0);
+  const lastPhase = useRef(phase);
 
-  useFrame(() => {
+  useEffect(() => {
+    if (!isActivePhase(phase)) return;
     const body = bodyRef.current;
-    if (!body || phase !== 'PARKING') return;
+    if (!body) return;
 
-    const rotation = body.rotation();
-    const quat = new THREE.Quaternion(rotation.x, rotation.y, rotation.z, rotation.w);
-    forward.set(0, 0, -1).applyQuaternion(quat);
+    const spawn = phase === 'SHOPPING' ? SPAWN.SHOPPING : SPAWN.PARKING;
+    yawRef.current = spawn.yaw;
+    body.setTranslation({ x: spawn.x, y: CART_HEIGHT, z: spawn.z }, true);
+    body.setLinvel({ x: 0, y: 0, z: 0 }, true);
+    euler.set(0, spawn.yaw, 0);
+    yawQuat.setFromEuler(euler);
+    body.setRotation({ x: yawQuat.x, y: yawQuat.y, z: yawQuat.z, w: yawQuat.w }, true);
+    lastPhase.current = phase;
+  }, [phase]);
 
+  useFrame((_, delta) => {
+    const body = bodyRef.current;
+    if (!body || !isActivePhase(phase)) return;
+
+    const input = getCartInput();
     const effectiveMass = getCartMass(inventoryWeight);
+    const massFactor = BASE_MASS / effectiveMass;
     const linvel = body.linvel();
-    const speed = Math.hypot(linvel.x, linvel.z);
+    let vx = linvel.x;
+    let vz = linvel.z;
+
+    const forwardX = -Math.sin(yawRef.current);
+    const forwardZ = -Math.cos(yawRef.current);
 
     if (input.forward) {
-      impulse.copy(forward).multiplyScalar(ACCEL * (BASE_MASS / effectiveMass));
-      body.applyImpulse(impulse, true);
+      vx += forwardX * ACCEL * massFactor * delta;
+      vz += forwardZ * ACCEL * massFactor * delta;
     }
     if (input.backward) {
-      impulse.copy(forward).multiplyScalar(-REVERSE_ACCEL * (BASE_MASS / effectiveMass));
-      body.applyImpulse(impulse, true);
+      vx -= forwardX * REVERSE_ACCEL * massFactor * delta;
+      vz -= forwardZ * REVERSE_ACCEL * massFactor * delta;
     }
 
-    const turnFactor = Math.max(0.25, speed / MAX_SPEED);
-    body.setAngvel({ x: 0, y: input.steer * TURN_RATE * turnFactor, z: 0 }, true);
+    const damping = Math.exp(-LINEAR_DAMPING * delta);
+    vx *= damping;
+    vz *= damping;
 
-    body.setLinearDamping(LINEAR_DAMPING);
-    body.setAngularDamping(ANGULAR_DAMPING);
-
+    const speed = Math.hypot(vx, vz);
     if (speed > MAX_SPEED) {
       const scale = MAX_SPEED / speed;
-      body.setLinvel({ x: linvel.x * scale, y: linvel.y, z: linvel.z * scale }, true);
+      vx *= scale;
+      vz *= scale;
     }
 
-    const position = body.translation();
-    onPositionChange?.(new THREE.Vector3(position.x, position.y, position.z));
+    if (input.steer !== 0) {
+      const turnFactor = speed > 0.05 ? Math.max(0.35, speed / MAX_SPEED) : 0.55;
+      yawRef.current += input.steer * TURN_RATE * turnFactor * delta;
+    }
+
+    euler.set(0, yawRef.current, 0);
+    yawQuat.setFromEuler(euler);
+    body.setRotation({ x: yawQuat.x, y: yawQuat.y, z: yawQuat.z, w: yawQuat.w }, true);
+    body.setAngvel({ x: 0, y: 0, z: 0 }, true);
+    body.setLinvel({ x: vx, y: 0, z: vz }, true);
+
+    const translation = body.translation();
+    if (Math.abs(translation.y - CART_HEIGHT) > 0.001) {
+      body.setTranslation({ x: translation.x, y: CART_HEIGHT, z: translation.z }, true);
+    }
+
+    positionVec.set(translation.x, CART_HEIGHT, translation.z);
+    useCartTransformStore.getState().setTransform(positionVec, yawRef.current, speed);
 
     usePlayerStore.getState().setCartPhysics({
-      velocity: { x: linvel.x, y: linvel.y, z: linvel.z },
+      velocity: { x: vx, y: 0, z: vz },
       momentum: speed * effectiveMass,
       mass: effectiveMass,
     });
@@ -86,49 +134,32 @@ export function ShoppingCart({ onPositionChange }: ShoppingCartProps) {
       type="dynamic"
       colliders="cuboid"
       args={[0.55, 0.9, 0.95]}
-      position={[0, 0.9, 18]}
+      position={[SPAWN.PARKING.x, CART_HEIGHT, SPAWN.PARKING.z]}
       mass={mass}
-      friction={0.6}
-      restitution={0.05}
-      linearDamping={LINEAR_DAMPING}
+      friction={0.85}
+      restitution={0}
+      linearDamping={0}
       angularDamping={ANGULAR_DAMPING}
+      enabledRotations={[false, true, false]}
+      gravityScale={0}
       collisionGroups={interactionGroups(COLLISION_GROUP.PLAYER, [COLLISION_GROUP.NPC, COLLISION_GROUP.STATIC])}
       onCollisionEnter={({ other }) => {
+        const otherBody = other.rigidBody;
+        const userData = otherBody?.userData as { isNpc?: boolean; cartLoad?: number } | undefined;
+        if (!otherBody || !userData?.isNpc) return;
+
         const now = performance.now();
-        if (now - lastCollisionAt.current < 350) return;
+        if (now - lastCollisionAt.current < 400) return;
         lastCollisionAt.current = now;
 
         const body = bodyRef.current;
         if (!body) return;
 
         const playerSpeed = Math.hypot(body.linvel().x, body.linvel().z);
-        const otherBody = other.rigidBody;
-        const otherLinvel = otherBody?.linvel();
-        const entitySpeed = otherLinvel
-          ? Math.hypot(otherLinvel.x, otherLinvel.z)
-          : 0;
-        const cartLoad =
-          (otherBody?.userData as { cartLoad?: number } | undefined)?.cartLoad ?? 1.2;
-
-        handleCollision(playerSpeed, entitySpeed, cartLoad);
+        const otherLinvel = otherBody.linvel();
+        const entitySpeed = Math.hypot(otherLinvel.x, otherLinvel.z);
+        handleCollision(playerSpeed, entitySpeed, userData.cartLoad ?? 1.5);
       }}
-    >
-      <group>
-        <mesh castShadow position={[0, 0.1, 0]}>
-          <boxGeometry args={[0.9, 0.75, 1.2]} />
-          <meshStandardMaterial color="#6b6f76" metalness={0.35} roughness={0.55} />
-        </mesh>
-        <mesh position={[0, 0.55, -0.55]}>
-          <boxGeometry args={[0.85, 0.08, 0.08]} />
-          <meshStandardMaterial color="#3d4045" />
-        </mesh>
-        {[-0.42, 0.42].map((x) => (
-          <mesh key={x} position={[x, -0.25, 0.45]} rotation={[Math.PI / 2, 0, 0]}>
-            <cylinderGeometry args={[0.12, 0.12, 0.08, 12]} />
-            <meshStandardMaterial color="#1a1a1a" />
-          </mesh>
-        ))}
-      </group>
-    </RigidBody>
+    />
   );
 }

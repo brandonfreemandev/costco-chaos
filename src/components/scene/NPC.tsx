@@ -76,7 +76,7 @@ export function NPC({ config }: NPCProps) {
       args={[0.45, 0.95, 0.45]}
       position={start}
       friction={0.8}
-      userData={{ cartLoad: config.cartLoad }}
+      userData={{ cartLoad: config.cartLoad, isNpc: true }}
       collisionGroups={interactionGroups(COLLISION_GROUP.NPC, [COLLISION_GROUP.PLAYER, COLLISION_GROUP.STATIC])}
     >
       <group>
