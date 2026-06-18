@@ -1,0 +1,59 @@
+# Core Mechanics Pseudocode
+
+// 1. Collision & Mental Health Drain
+function HandleCollision(player, entity) {
+    let relativeVelocity = calculateDifference(player.velocity, entity.velocity);
+    let impactForce = relativeVelocity * entity.cartLoad;
+    
+    // Calculate damage based on severity
+    let mentalHealthDamage = mapValue(impactForce, MIN_IMPACT, MAX_IMPACT, 1, 15);
+    
+    player.mentalHealth -= mentalHealthDamage;
+    
+    TriggerAudioEvent("CartSlam", impactForce);
+    TriggerUIEffect("VisionBlur", mentalHealthDamage);
+    
+    if (player.mentalHealth <= 0) {
+        TriggerNervousBreakdown();
+    }
+}
+
+// 2. Dynamic Sample Station
+function SampleStationLogic(kiosk) {
+    if (Timer.isExpired(kiosk.spawnTimer)) {
+        kiosk.hasSample = true;
+        kiosk.spawnTimer = random(45, 90); // Seconds
+        
+        let nearbyNPCs = AIManager.getNPCsInRadius(kiosk.position, 20.0);
+        foreach (npc in nearbyNPCs) {
+            if (npc.obsessiveness > random(0, 100)) {
+                npc.overridePathfinding(kiosk.position);
+                npc.speed *= 1.5; // Rush the sample
+            }
+        }
+    }
+}
+
+// 3. Checkout "Boss" Phase
+function UpdateCheckoutQueue() {
+    foreach (lane in CheckoutLanes) {
+        if (!lane.isOpen) continue;
+
+        // Drain player health rapidly if they are in this lane
+        if (lane.contains(player)) {
+            player.mentalHealth -= (1.5 * Time.deltaTime);
+        }
+
+        if (Timer.isExpired(lane.processingTimer)) {
+            let currentCustomer = lane.queue.popFront();
+            
+            // Recalculate next delay based on next customer's cart size
+            let nextCustomer = lane.queue.peekFront();
+            if (nextCustomer) {
+                 let disputeProbability = random(0.0, 1.0);
+                 let baseDelay = nextCustomer.cartLoad / lane.cashierBaseSpeed;
+                 lane.processingTimer = disputeProbability > 0.8 ? baseDelay * 3 : baseDelay;
+            }
+        }
+    }
+}
