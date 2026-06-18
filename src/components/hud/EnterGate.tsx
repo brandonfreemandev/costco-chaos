@@ -15,17 +15,16 @@ export function EnterGate() {
   return (
     <div className="enter-gate">
       <div className="enter-panel">
-        <div className="enter-header">COSTCO CHAOS — EMPLOYEE INTRANET</div>
+        <div className="enter-header">Costco Chaos</div>
         <p className="enter-body">
-          Authorized personnel only. By clicking below you acknowledge that parking lot
-          navigation is a privilege, not a right.
+          Navigate the parking lot, enter the warehouse, and collect your manifest
+          items before stress wins.
         </p>
         <button type="button" className="enter-button" onClick={() => void handleEnter()}>
-          Click to Enter Warehouse
+          Start Shift
         </button>
         <p className="enter-fine-print">
-          ↑↓ or W/S to push cart. ←→ or A/D to steer. Cross the crosswalk and enter
-          the warehouse doors ahead. You should hear a chime and cart squeak when moving.
+          W/↑ forward · S/↓ back · A/← left · D/→ right · Follow glowing products on shelves
         </p>
       </div>
     </div>

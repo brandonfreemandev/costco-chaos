@@ -1,7 +1,8 @@
+import { useMemo } from 'react';
 import { RigidBody, interactionGroups } from '@react-three/rapier';
 import { Text } from '@react-three/drei';
 import { COLLISION_GROUP } from '../../types/state';
-import { NPC, type NPCConfig } from './NPC';
+import { CulledNPC, generateParkingNPCs } from './CulledNPC';
 import { CostcoBuilding } from './CostcoBuilding';
 import {
   BUILDING,
@@ -11,47 +12,6 @@ import {
   MAIN_DRIVE,
   SIDEWALK,
 } from './parkingLotLayout';
-
-const PARKING_NPCS: NPCConfig[] = [
-  {
-    id: 'lot-blocker-1',
-    archetype: 'BLOCKER',
-    baseSpeed: 0.95,
-    obsessiveness: 30,
-    cartLoad: 2.5,
-    color: '#b8a48c',
-    waypoints: [
-      [-7, 0.95, 18],
-      [-7, 0.95, 2],
-      [-7, 0.95, -12],
-    ],
-  },
-  {
-    id: 'lot-blocker-2',
-    archetype: 'BLOCKER',
-    baseSpeed: 0.8,
-    obsessiveness: 20,
-    cartLoad: 2.8,
-    color: '#9a9a9a',
-    waypoints: [
-      [7, 0.95, 22],
-      [7, 0.95, 6],
-      [7, 0.95, -10],
-    ],
-  },
-  {
-    id: 'lot-aggressor-1',
-    archetype: 'AGGRESSOR',
-    baseSpeed: 1.8,
-    obsessiveness: 10,
-    cartLoad: 1.1,
-    color: '#c47a7a',
-    waypoints: [
-      [2.5, 0.95, 28],
-      [2.5, 0.95, -8],
-    ],
-  },
-];
 
 function StaticCollider({
   position,
@@ -148,6 +108,7 @@ function ParkingStall({ x, z, rotation = 0 }: { x: number; z: number; rotation?:
 
 export function ParkingLot() {
   const parkedCars = generateParkedCars();
+  const parkingNpcs = useMemo(() => generateParkingNPCs(), []);
   const { width, depth, minX, maxX, minZ, maxZ } = LOT;
 
   const stallPositions: [number, number][] = [];
@@ -241,8 +202,8 @@ export function ParkingLot() {
         </group>
       ))}
 
-      {PARKING_NPCS.map((config) => (
-        <NPC key={config.id} config={config} />
+      {parkingNpcs.map((config) => (
+        <CulledNPC key={config.id} config={config} cullDistance={38} wakeDistance={42} />
       ))}
     </group>
   );

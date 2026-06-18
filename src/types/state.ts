@@ -15,6 +15,8 @@ export interface ShoppingListItem {
   aisle: string;
   category: ShoppingCategory;
   collected: boolean;
+  worldPosition: { x: number; y: number; z: number };
+  productColor: string;
 }
 
 export interface CartPhysics {

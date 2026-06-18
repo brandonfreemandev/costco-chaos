@@ -1,46 +1,13 @@
+import { useMemo } from 'react';
 import { RigidBody, interactionGroups } from '@react-three/rapier';
+import { usePlayerStore } from '../../stores/playerStore';
 import { COLLISION_GROUP } from '../../types/state';
-import { NPC, type NPCConfig } from './NPC';
+import { CulledNPC, generateWarehouseNPCs } from './CulledNPC';
+import { CollectibleProduct, DecoyShelfProduct } from './ShelfProducts';
+import { generateDecoyProducts } from './warehouseProducts';
 
-const WAREHOUSE_NPCS: NPCConfig[] = [
-  {
-    id: 'wh-blocker-1',
-    archetype: 'BLOCKER',
-    baseSpeed: 0.85,
-    obsessiveness: 40,
-    cartLoad: 3.0,
-    color: '#b8a48c',
-    waypoints: [
-      [-1.8, 0.95, 10],
-      [-1.8, 0.95, -2],
-      [1.8, 0.95, -2],
-    ],
-  },
-  {
-    id: 'wh-blocker-2',
-    archetype: 'BLOCKER',
-    baseSpeed: 0.7,
-    obsessiveness: 25,
-    cartLoad: 2.6,
-    color: '#9a9a9a',
-    waypoints: [
-      [2.2, 0.95, 14],
-      [2.2, 0.95, 0],
-    ],
-  },
-  {
-    id: 'wh-aggressor-1',
-    archetype: 'AGGRESSOR',
-    baseSpeed: 1.5,
-    obsessiveness: 15,
-    cartLoad: 1.2,
-    color: '#c47a7a',
-    waypoints: [
-      [-2.4, 0.95, -6],
-      [-2.4, 0.95, 8],
-    ],
-  },
-];
+const AISLE_LENGTH = 52;
+const AISLE_WIDTH = 14;
 
 function Boundary({ position, args }: { position: [number, number, number]; args: [number, number, number] }) {
   return (
@@ -58,7 +25,7 @@ function Boundary({ position, args }: { position: [number, number, number]; args
   );
 }
 
-function ShelfRow({ x, length }: { x: number; length: number }) {
+function ShelfStructure({ x, length }: { x: number; length: number }) {
   const segments = Math.floor(length / 3);
   return (
     <group>
@@ -68,13 +35,9 @@ function ShelfRow({ x, length }: { x: number; length: number }) {
             <boxGeometry args={[1.5, 2.8, 2.7]} />
             <meshStandardMaterial color="#6e5a45" roughness={0.88} />
           </mesh>
-          <mesh castShadow position={[0, 2.2, 0]}>
-            <boxGeometry args={[1.45, 0.55, 2.6]} />
-            <meshStandardMaterial color="#c9b896" roughness={0.92} />
-          </mesh>
-          <mesh castShadow position={[0, 0.65, 0]}>
-            <boxGeometry args={[1.45, 1.1, 2.6]} />
-            <meshStandardMaterial color="#8a7358" roughness={0.9} />
+          <mesh castShadow position={[0, 0.15, 0]}>
+            <boxGeometry args={[1.55, 0.12, 2.75]} />
+            <meshStandardMaterial color="#4a3d30" roughness={0.9} />
           </mesh>
         </group>
       ))}
@@ -83,39 +46,57 @@ function ShelfRow({ x, length }: { x: number; length: number }) {
 }
 
 export function WarehouseAisles() {
-  const aisleLength = 52;
-  const aisleWidth = 14;
+  const items = usePlayerStore((s) => s.inventory.items);
+  const decoys = useMemo(() => generateDecoyProducts(AISLE_LENGTH), []);
+  const npcs = useMemo(() => generateWarehouseNPCs(AISLE_LENGTH), []);
 
   return (
     <group>
       <RigidBody
         type="fixed"
         colliders="cuboid"
-        args={[aisleWidth, 0.2, aisleLength]}
+        args={[AISLE_WIDTH, 0.2, AISLE_LENGTH]}
         position={[0, -0.1, 0]}
         friction={1}
       >
         <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[aisleWidth, aisleLength]} />
+          <planeGeometry args={[AISLE_WIDTH, AISLE_LENGTH]} />
           <meshStandardMaterial color="#6a6d72" roughness={0.92} metalness={0.1} />
         </mesh>
       </RigidBody>
 
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
-        <planeGeometry args={[3.6, aisleLength - 2]} />
+        <planeGeometry args={[3.6, AISLE_LENGTH - 2]} />
         <meshStandardMaterial color="#e0dbd2" roughness={0.95} />
       </mesh>
 
-      <ShelfRow x={-5.4} length={aisleLength} />
-      <ShelfRow x={5.4} length={aisleLength} />
+      <ShelfStructure x={-5.4} length={AISLE_LENGTH} />
+      <ShelfStructure x={5.4} length={AISLE_LENGTH} />
+
+      {decoys.map((p) => (
+        <DecoyShelfProduct
+          key={p.id}
+          x={p.x}
+          y={p.y}
+          z={p.z}
+          w={p.w}
+          h={p.h}
+          d={p.d}
+          color={p.color}
+        />
+      ))}
+
+      {items.map((item) => (
+        <CollectibleProduct key={item.id} item={item} />
+      ))}
 
       <mesh position={[0, 5, 0]}>
-        <boxGeometry args={[aisleWidth, 0.4, aisleLength]} />
+        <boxGeometry args={[AISLE_WIDTH, 0.4, AISLE_LENGTH]} />
         <meshStandardMaterial color="#3a3d42" roughness={0.8} />
       </mesh>
 
       {Array.from({ length: 12 }, (_, i) => (
-        <group key={i} position={[0, 4.85, -aisleLength / 2 + i * 4.5 + 2]}>
+        <group key={i} position={[0, 4.85, -AISLE_LENGTH / 2 + i * 4.5 + 2]}>
           <mesh>
             <boxGeometry args={[2.8, 0.1, 1.6]} />
             <meshStandardMaterial
@@ -125,31 +106,32 @@ export function WarehouseAisles() {
               roughness={0.25}
             />
           </mesh>
-          <pointLight intensity={22} distance={12} decay={2} color="#f0f8ff" />
+          <pointLight intensity={18} distance={12} decay={2} color="#f0f8ff" />
         </group>
       ))}
 
       {Array.from({ length: 10 }, (_, i) => (
-        <group key={`led-${i}`} position={[0, 4.6, -aisleLength / 2 + i * 5 + 2.5]}>
-          <mesh>
-            <boxGeometry args={[12, 0.12, 0.8]} />
-            <meshStandardMaterial
-              color="#f5f5f0"
-              emissive="#fff8e0"
-              emissiveIntensity={0.85}
-              roughness={0.3}
-            />
-          </mesh>
-        </group>
+        <mesh
+          key={`led-${i}`}
+          position={[0, 4.6, -AISLE_LENGTH / 2 + i * 5 + 2.5]}
+        >
+          <boxGeometry args={[12, 0.12, 0.8]} />
+          <meshStandardMaterial
+            color="#f5f5f0"
+            emissive="#fff8e0"
+            emissiveIntensity={0.85}
+            roughness={0.3}
+          />
+        </mesh>
       ))}
 
-      <Boundary position={[0, 2, -aisleLength / 2 - 0.5]} args={[aisleWidth, 4, 1]} />
-      <Boundary position={[0, 2, aisleLength / 2 + 0.5]} args={[aisleWidth, 4, 1]} />
-      <Boundary position={[-7.5, 2, 0]} args={[1, 4, aisleLength]} />
-      <Boundary position={[7.5, 2, 0]} args={[1, 4, aisleLength]} />
+      <Boundary position={[0, 2, -AISLE_LENGTH / 2 - 0.5]} args={[AISLE_WIDTH, 4, 1]} />
+      <Boundary position={[0, 2, AISLE_LENGTH / 2 + 0.5]} args={[AISLE_WIDTH, 4, 1]} />
+      <Boundary position={[-7.5, 2, 0]} args={[1, 4, AISLE_LENGTH]} />
+      <Boundary position={[7.5, 2, 0]} args={[1, 4, AISLE_LENGTH]} />
 
-      {WAREHOUSE_NPCS.map((config) => (
-        <NPC key={config.id} config={config} />
+      {npcs.map((config) => (
+        <CulledNPC key={config.id} config={config} />
       ))}
     </group>
   );

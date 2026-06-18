@@ -6,43 +6,37 @@ export function ShoppingListGrid() {
   const phase = useGameStore((s) => s.phase);
 
   return (
-    <div className="panel shopping-panel">
-      <div className="panel-title">Fulfillment Manifest — Route Sheet</div>
-      <table className="datagrid shopping-grid">
-        <thead>
-          <tr>
-            <th>SKU</th>
-            <th>Description</th>
-            <th>Location</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((item) => (
-            <tr key={item.id} className={item.collected ? 'row-complete' : ''}>
-              <td>{item.sku}</td>
-              <td>{item.name}</td>
-              <td>{item.aisle}</td>
-              <td>
-                {item.collected
-                  ? 'PICKED'
-                  : phase === 'PARKING'
-                    ? 'AWAITING ENTRY'
-                    : phase === 'SHOPPING'
-                      ? 'OPEN'
-                      : 'QUEUED'}
-              </td>
+    <section className="sidebar-section manifest-section">
+      <div className="section-label">Shopping List</div>
+      <div className="manifest-table-wrap">
+        <table className="manifest-table">
+          <thead>
+            <tr>
+              <th className="col-sku">SKU</th>
+              <th>Item</th>
+              <th className="col-status">Status</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-      <div className="fine-print">
-        {phase === 'PARKING'
-          ? 'Push cart to the warehouse entrance. Cross the marked crosswalk and enter through the doors.'
-          : phase === 'SHOPPING'
-            ? 'First-person aisle navigation active. Steer with ← → while pushing forward.'
-            : 'Proceed to checkout when manifest is complete.'}
+          </thead>
+          <tbody>
+            {items.map((item) => (
+              <tr key={item.id} className={item.collected ? 'row-done' : ''}>
+                <td className="col-sku">{item.sku}</td>
+                <td className="col-item">
+                  <span className="item-name">{item.name}</span>
+                  <span className="item-aisle">{item.aisle}</span>
+                </td>
+                <td className="col-status">
+                  {item.collected
+                    ? '✓'
+                    : phase === 'SHOPPING'
+                      ? 'Find'
+                      : '—'}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
-    </div>
+    </section>
   );
 }

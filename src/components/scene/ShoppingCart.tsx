@@ -21,14 +21,14 @@ import {
 } from '../../systems/physicsController';
 import { handleCollision } from '../../systems/handleCollision';
 
-const yawQuat = new THREE.Quaternion();
-const euler = new THREE.Euler(0, 0, 0, 'YXZ');
-const positionVec = new THREE.Vector3();
-
 import {
   PLAYER_SPAWN,
   WAREHOUSE_INTERIOR_SPAWN,
 } from './parkingLotLayout';
+
+const yawQuat = new THREE.Quaternion();
+const euler = new THREE.Euler(0, 0, 0, 'YXZ');
+const positionVec = new THREE.Vector3();
 
 const SPAWN = {
   PARKING: PLAYER_SPAWN,
@@ -100,7 +100,7 @@ export function ShoppingCart() {
 
     if (input.steer !== 0) {
       const turnFactor = speed > 0.05 ? Math.max(0.35, speed / MAX_SPEED) : 0.55;
-      yawRef.current += input.steer * TURN_RATE * turnFactor * delta;
+      yawRef.current -= input.steer * TURN_RATE * turnFactor * delta;
     }
 
     euler.set(0, yawRef.current, 0);

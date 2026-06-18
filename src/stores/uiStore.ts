@@ -3,13 +3,17 @@ import { create } from 'zustand';
 interface UIStore {
   visionBlur: number;
   lastCollisionMessage: string | null;
+  sidebarCollapsed: boolean;
   triggerVisionBlur: (severity: number) => void;
   clearCollisionMessage: () => void;
+  toggleSidebar: () => void;
+  setSidebarCollapsed: (collapsed: boolean) => void;
 }
 
 export const useUIStore = create<UIStore>((set) => ({
   visionBlur: 0,
   lastCollisionMessage: null,
+  sidebarCollapsed: false,
 
   triggerVisionBlur: (severity) => {
     set({
@@ -22,4 +26,8 @@ export const useUIStore = create<UIStore>((set) => ({
   },
 
   clearCollisionMessage: () => set({ lastCollisionMessage: null }),
+
+  toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
+
+  setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
 }));
