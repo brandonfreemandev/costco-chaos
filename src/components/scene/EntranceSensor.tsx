@@ -1,10 +1,9 @@
 import { useEffect } from 'react';
-import { usePlayerStore } from '../../stores/playerStore';
 import { useGameStore } from '../../stores/gameStore';
 import { useCartTransformStore } from '../../stores/cartTransformStore';
-import { ENTRANCE_ZONE } from './parkingLotLayout';
+import { CROSSWALK, ENTRANCE_ZONE } from './parkingLotLayout';
 
-export function ParkingSpotSensor() {
+export function EntranceSensor() {
   const enterWarehouse = useGameStore((s) => s.secureParkingSpot);
   const parkingSpotSecured = useGameStore((s) => s.parkingSpotSecured);
   const phase = useGameStore((s) => s.phase);
@@ -14,9 +13,9 @@ export function ParkingSpotSensor() {
 
     const interval = window.setInterval(() => {
       const position = useCartTransformStore.getState().position;
-      const { velocity } = usePlayerStore.getState().cartPhysics;
-      const speed = Math.hypot(velocity.x, velocity.z);
+      const speed = useCartTransformStore.getState().speed;
 
+      const crossedCrosswalk = position.z <= CROSSWALK.z + 1.5;
       const inEntrance =
         position.x >= ENTRANCE_ZONE.minX &&
         position.x <= ENTRANCE_ZONE.maxX &&
@@ -24,7 +23,7 @@ export function ParkingSpotSensor() {
         position.z <= ENTRANCE_ZONE.maxZ &&
         speed <= ENTRANCE_ZONE.maxSpeed;
 
-      if (inEntrance) {
+      if (crossedCrosswalk && inEntrance) {
         enterWarehouse();
       }
     }, 200);

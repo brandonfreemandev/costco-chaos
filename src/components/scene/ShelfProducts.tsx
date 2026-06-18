@@ -1,9 +1,11 @@
 import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
+import { RigidBody, interactionGroups } from '@react-three/rapier';
 import * as THREE from 'three';
 import { usePlayerStore } from '../../stores/playerStore';
 import { useCartTransformStore } from '../../stores/cartTransformStore';
 import { spatialAudio } from '../../audio/spatialAudioManager';
+import { COLLISION_GROUP } from '../../types/state';
 import type { ShoppingListItem } from '../../types/state';
 import { QUEST_PRODUCT_VISUALS } from './warehouseProducts';
 
@@ -55,13 +57,7 @@ export function CollectibleProduct({ item }: CollectibleProductProps) {
 
   return (
     <group position={[item.worldPosition.x, item.worldPosition.y, item.worldPosition.z]}>
-      <pointLight
-        ref={lightRef}
-        color="#ffe566"
-        intensity={1.5}
-        distance={5}
-        decay={2}
-      />
+      <pointLight ref={lightRef} color="#ffe566" intensity={1.5} distance={5} decay={2} />
       <mesh ref={meshRef} castShadow>
         <boxGeometry args={[visual.w, visual.h, visual.d]} />
         <meshStandardMaterial
@@ -98,9 +94,18 @@ interface DecoyShelfProductProps {
 
 export function DecoyShelfProduct({ x, y, z, w, h, d, color }: DecoyShelfProductProps) {
   return (
-    <mesh position={[x, y, z]} castShadow>
-      <boxGeometry args={[w, h, d]} />
-      <meshStandardMaterial color={color} roughness={0.82} metalness={0.05} />
-    </mesh>
+    <RigidBody
+      type="fixed"
+      colliders="cuboid"
+      args={[w / 2, h / 2, d / 2]}
+      position={[x, y, z]}
+      friction={0.9}
+      collisionGroups={interactionGroups(COLLISION_GROUP.STATIC, [COLLISION_GROUP.PLAYER, COLLISION_GROUP.NPC])}
+    >
+      <mesh castShadow>
+        <boxGeometry args={[w, h, d]} />
+        <meshStandardMaterial color={color} roughness={0.82} metalness={0.05} />
+      </mesh>
+    </RigidBody>
   );
 }

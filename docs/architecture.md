@@ -1,7 +1,7 @@
 # System Architecture: Costco Chaos
 
 ## Core Gameplay Loop
-1. **The Gauntlet (Parking Lot):** Navigate momentum-based cart physics to secure a parking spot while avoiding aggressive NPC vehicles and pedestrians.
+1. **The Gauntlet (Parking Lot):** Push a shopping cart through chaotic crowds and abandoned-cart obstacles to reach the store entrance (crosswalk + door threshold).
 2. **The Fulfillment (Warehouse):** Traverse the store layout to collect randomized list items. Manage Mental Health (MH) against collision penalties.
 3. **The Oasis (Sample Kiosks):** Optional high-risk/high-reward diversions to restore MH.
 4. **The Purgatory (Checkout):** A lane-management survival phase where MH drains continuously until the transaction completes.

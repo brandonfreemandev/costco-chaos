@@ -1,7 +1,7 @@
 import { useGameStore } from '../../stores/gameStore';
 import { usePlayerStore } from '../../stores/playerStore';
 import { useUIStore } from '../../stores/uiStore';
-import { ComplianceGauge } from './ComplianceGauge';
+import { MentalHealthGauge } from './MentalHealthGauge';
 import { ShoppingListGrid } from './ShoppingListGrid';
 
 export function GameSidebar() {
@@ -55,23 +55,23 @@ export function GameSidebar() {
         </header>
 
         <div className="sidebar-scroll">
-          <ComplianceGauge />
+          <MentalHealthGauge />
 
           <section className="sidebar-section">
             <div className="section-label">Objective</div>
             <p className="objective-copy">
               {phase === 'PARKING' && !parkingSpotSecured
-                ? 'Reach the warehouse entrance through the crosswalk.'
+                ? 'Push your cart through the parking lot chaos and reach the entrance.'
                 : phase === 'SHOPPING'
-                  ? `Collect glowing items (${itemsRemaining} remaining).`
-                  : 'Complete your shift.'}
+                  ? `Grab the glowing items on your list (${itemsRemaining} left).`
+                  : 'Finish your trip.'}
             </p>
           </section>
 
           <ShoppingListGrid />
 
-          <section className="sidebar-section telemetry-section">
-            <div className="section-label">Telemetry</div>
+          <section className="sidebar-section stats-section">
+            <div className="section-label">Cart Stats</div>
             <div className="stat-grid">
               <div className="stat-cell">
                 <span className="stat-key">Zone</span>
@@ -82,12 +82,12 @@ export function GameSidebar() {
                 <span className="stat-val">{momentum.toFixed(1)}</span>
               </div>
               <div className="stat-cell">
-                <span className="stat-key">Status</span>
+                <span className="stat-key">Location</span>
                 <span className="stat-val">{parkingSpotSecured ? 'Inside' : 'Outside'}</span>
               </div>
               <div className="stat-cell">
                 <span className="stat-key">Checkout</span>
-                <span className="stat-val">{phase === 'CHECKOUT' ? 'Active' : 'Off'}</span>
+                <span className="stat-val">{phase === 'CHECKOUT' ? 'In line' : 'Not yet'}</span>
               </div>
             </div>
           </section>
@@ -111,7 +111,7 @@ export function GameSidebar() {
         <div className="game-over-overlay">
           <div className="game-over-panel">
             <h1>Nervous Breakdown</h1>
-            <p>Compliance Index hit 0%. HR has been notified.</p>
+            <p>Your mental health hit zero. The trip is over.</p>
             <button type="button" className="primary-button" onClick={handleReset}>
               Try Again
             </button>

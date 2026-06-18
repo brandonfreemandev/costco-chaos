@@ -194,15 +194,15 @@ button {
   line-height: 1.5;
 }
 
-/* ── Compliance gauge ────────────────────────────── */
+/* ── Mental health gauge ─────────────────────────── */
 
-.compliance-row {
+.mental-health-row {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.compliance-track {
+.mental-health-track {
   flex: 1;
   height: 8px;
   background: #0f172a;
@@ -210,13 +210,13 @@ button {
   overflow: hidden;
 }
 
-.compliance-fill {
+.mental-health-fill {
   height: 100%;
   border-radius: 99px;
   transition: width 0.2s ease;
 }
 
-.compliance-value {
+.mental-health-value {
   font-size: 13px;
   font-weight: 600;
   color: #f1f5f9;

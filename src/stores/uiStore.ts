@@ -18,7 +18,7 @@ export const useUIStore = create<UIStore>((set) => ({
   triggerVisionBlur: (severity) => {
     set({
       visionBlur: Math.min(6, severity * 0.35),
-      lastCollisionMessage: `INCIDENT LOGGED — impact severity ${severity.toFixed(1)}`,
+      lastCollisionMessage: `Someone bumped you — mental health −${severity.toFixed(0)}`,
     });
     window.setTimeout(() => {
       set({ visionBlur: 0 });

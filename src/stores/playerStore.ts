@@ -18,7 +18,7 @@ const SHOPPING_ITEMS: ShoppingListItem[] = [
     aisle: 'Aisle 501 (Meat)',
     category: 'meat',
     collected: false,
-    worldPosition: { x: -4.6, y: 1.1, z: -14 },
+    worldPosition: { x: -2.6, y: 1.1, z: -18 },
     productColor: '#f5c6a5',
   },
   {
@@ -28,7 +28,7 @@ const SHOPPING_ITEMS: ShoppingListItem[] = [
     aisle: 'Aisle 310 (Bakery)',
     category: 'bakery',
     collected: false,
-    worldPosition: { x: 4.6, y: 0.95, z: -6 },
+    worldPosition: { x: 2.6, y: 0.95, z: -10 },
     productColor: '#d4a574',
   },
   {
@@ -38,7 +38,7 @@ const SHOPPING_ITEMS: ShoppingListItem[] = [
     aisle: 'Aisle 120 (Electronics)',
     category: 'electronics',
     collected: false,
-    worldPosition: { x: -4.6, y: 1.5, z: 6 },
+    worldPosition: { x: -2.6, y: 1.5, z: 4 },
     productColor: '#1a1a22',
   },
   {
@@ -48,7 +48,7 @@ const SHOPPING_ITEMS: ShoppingListItem[] = [
     aisle: 'Aisle 214 (Bulk Paper)',
     category: 'bulkPaper',
     collected: false,
-    worldPosition: { x: 4.6, y: 1.35, z: 14 },
+    worldPosition: { x: 2.6, y: 1.35, z: 14 },
     productColor: '#f0ebe3',
   },
 ];

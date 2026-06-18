@@ -2,11 +2,12 @@ import { useMemo } from 'react';
 import { RigidBody, interactionGroups } from '@react-three/rapier';
 import { Text } from '@react-three/drei';
 import { COLLISION_GROUP } from '../../types/state';
-import { CulledNPC, generateParkingNPCs } from './CulledNPC';
+import { CulledNPC, generateGauntletNPCs } from './CulledNPC';
 import { CostcoBuilding } from './CostcoBuilding';
 import {
   BUILDING,
   CROSSWALK,
+  APPROACH_CART_OBSTACLES,
   generateParkedCars,
   LOT,
   MAIN_DRIVE,
@@ -78,6 +79,31 @@ function darken(hex: string): string {
   return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
 }
 
+function AbandonedCart({ x, z }: { x: number; z: number }) {
+  return (
+    <RigidBody
+      type="fixed"
+      colliders="cuboid"
+      args={[0.55, 0.85, 0.9]}
+      position={[x, 0.85, z]}
+      rotation={[0, (x + z) * 0.07, 0]}
+      friction={0.9}
+      collisionGroups={interactionGroups(COLLISION_GROUP.STATIC, [COLLISION_GROUP.PLAYER, COLLISION_GROUP.NPC])}
+    >
+      <group>
+        <mesh castShadow>
+          <boxGeometry args={[0.55, 0.85, 0.9]} />
+          <meshStandardMaterial color="#6a6e74" metalness={0.35} roughness={0.55} />
+        </mesh>
+        <mesh position={[0, 0.55, -0.35]}>
+          <boxGeometry args={[0.65, 0.04, 0.06]} />
+          <meshStandardMaterial color="#2e3136" metalness={0.5} roughness={0.4} />
+        </mesh>
+      </group>
+    </RigidBody>
+  );
+}
+
 function CrosswalkStripes() {
   const stripes = [];
   const count = 7;
@@ -108,7 +134,7 @@ function ParkingStall({ x, z, rotation = 0 }: { x: number; z: number; rotation?:
 
 export function ParkingLot() {
   const parkedCars = generateParkedCars();
-  const parkingNpcs = useMemo(() => generateParkingNPCs(), []);
+  const gauntletNpcs = useMemo(() => generateGauntletNPCs(), []);
   const { width, depth, minX, maxX, minZ, maxZ } = LOT;
 
   const stallPositions: [number, number][] = [];
@@ -202,8 +228,16 @@ export function ParkingLot() {
         </group>
       ))}
 
-      {parkingNpcs.map((config) => (
-        <CulledNPC key={config.id} config={config} cullDistance={38} wakeDistance={42} />
+      {APPROACH_CART_OBSTACLES.map((cart, i) => (
+        <AbandonedCart key={`abandon-${i}`} x={cart.x} z={cart.z} />
+      ))}
+
+      {gauntletNpcs.map((config) => (
+        <CulledNPC
+          key={config.id}
+          config={config}
+          alwaysActiveInGauntlet={config.id.startsWith('gauntlet-')}
+        />
       ))}
     </group>
   );

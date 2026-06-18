@@ -6,12 +6,15 @@ The game operates on a dissonance between high-fidelity 3D assets and deeply cyn
 *   **Environment:** High-res PBR textures. The concrete floor should have hyper-realistic reflections from the harsh fluorescent lighting. The sheer scale of the pallets should feel physically oppressive.
 *   **Animations:** Exaggerated, but grounded. An NPC shouldn't just turn; they should struggle to pivot a 300-pound flatbed of bottled water, creating mechanical tension.
 
-## The HUD & UI Design (Corporate Intranet Vibe)
-Do not use sleek, modern gaming UI components. The HUD must resemble 2010s-era enterprise software (e.g., MS Access, early Salesforce, or municipal government portals).
+## The HUD & UI Design (Current Implementation)
+The live game uses a **clean modern collapsible sidebar** (`GameSidebar.tsx`) — dark slate panel, Mental Health bar, shopping list grid, cart stats. This replaced an earlier corporate-intranet concept.
+
+## The HUD & UI Design (Original Concept — Partially Stale)
+The original vision called for 2010s-era enterprise software aesthetics. **Do not implement this unless the user explicitly asks to revert.**
 
 *   **Color Palette:** Gray bevels, harsh #0000FF hyperlinks, muted beige backgrounds for inventory panes.
 *   **Typography:** Strict use of Arial, Tahoma, or Verdana. No anti-aliasing on small text.
-*   **Mental Health Meter:** Instead of a traditional health bar, represent this as an enterprise "System Integrity" or "Compliance" gauge. It should feature a harsh, un-styled progress bar (green to yellow to critical red) encased in a thick, gray Windows 98-style border.
+*   **Mental Health Meter:** A clean progress bar (green to yellow to critical red) labeled "Mental Health" — drops when other shoppers bump your cart.
 *   **Shopping List:** Rendered as a dense, unreadable datagrid. Checking off an item should trigger a highly compressed, corporate "ding" sound effect.
 
 ## Sound Design

@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useCartTransformStore } from '../../stores/cartTransformStore';
+import { useGameStore } from '../../stores/gameStore';
 
 const EYE_HEIGHT = 1.62;
 const CAMERA_BEHIND = 0.28;
@@ -13,6 +14,8 @@ export function FirstPersonCartCamera() {
   const bobPhase = useRef(0);
   const localOffset = useRef(new THREE.Vector3(0, -0.32, -0.72));
   const worldOffset = useRef(new THREE.Vector3());
+  const phase = useGameStore((s) => s.phase);
+  const hasCart = phase === 'PARKING' || phase === 'SHOPPING' || phase === 'CHECKOUT';
 
   useFrame((_, delta) => {
     const { position, yaw, speed } = useCartTransformStore.getState();
@@ -23,23 +26,27 @@ export function FirstPersonCartCamera() {
     bobPhase.current += delta * (2.5 + speed * 1.8);
     const bob = Math.sin(bobPhase.current) * BOB_AMPLITUDE * Math.min(1, speed / 2.5);
 
+    const behind = hasCart ? CAMERA_BEHIND : 0;
     camera.position.set(
-      position.x - forwardX * CAMERA_BEHIND,
+      position.x - forwardX * behind,
       EYE_HEIGHT + bob,
-      position.z - forwardZ * CAMERA_BEHIND,
+      position.z - forwardZ * behind,
     );
     camera.rotation.set(0, yaw, 0, 'YXZ');
 
-    if (handleRef.current) {
+    if (handleRef.current && hasCart) {
       worldOffset.current.copy(localOffset.current).applyQuaternion(camera.quaternion);
       handleRef.current.position.copy(camera.position).add(worldOffset.current);
       handleRef.current.rotation.copy(camera.rotation);
       handleRef.current.rotateX(0.08);
+      handleRef.current.visible = true;
+    } else if (handleRef.current) {
+      handleRef.current.visible = false;
     }
   });
 
   return (
-    <group ref={handleRef}>
+    <group ref={handleRef} visible={hasCart}>
       <mesh>
         <boxGeometry args={[0.78, 0.055, 0.06]} />
         <meshStandardMaterial color="#2e3136" metalness={0.55} roughness={0.4} />

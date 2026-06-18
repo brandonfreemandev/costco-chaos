@@ -17,7 +17,7 @@ export function GameHud() {
 
       {phase === 'PARKING' && !parkingSpotSecured && (
         <div className="toast-banner toast-objective">
-          Cross the crosswalk and enter the warehouse doors ahead.
+          Walk to the crosswalk — dodge carts and shoppers to reach the doors.
         </div>
       )}
     </div>

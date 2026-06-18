@@ -37,7 +37,17 @@ export const MAIN_DRIVE = {
   maxX: 4.5,
 } as const;
 
-export const PLAYER_SPAWN = { x: 0, z: 32, yaw: 0 } as const;
+/** Start near the crosswalk gauntlet — cart in hand, chaos immediately. */
+export const PLAYER_SPAWN = { x: 0, z: -8, yaw: 0 } as const;
+
+/** Abandoned carts and corral clutter on the approach to the entrance. */
+export const APPROACH_CART_OBSTACLES = [
+  { x: -2.4, z: 2 },
+  { x: 2.6, z: -1 },
+  { x: -1.6, z: -6 },
+  { x: 2.2, z: -11 },
+  { x: -2.8, z: -15 },
+] as const;
 
 export const WAREHOUSE_INTERIOR_SPAWN = { x: 0, z: 16, yaw: 0 } as const;
 
@@ -77,7 +87,7 @@ export function generateParkedCars(): ParkedCarSpec[] {
   const addIfClear = (x: number, z: number, rotation: number, color: string) => {
     if (z > 35 || z < -8) return;
     if (x > MAIN_DRIVE.minX && x < MAIN_DRIVE.maxX && z > -18) return;
-    if (Math.abs(x) < 5 && z > 24 && z < 36) return;
+    if (Math.abs(x) < 5 && z > -14 && z < 6) return;
     cars.push({ id: `car-${id++}`, x, z, rotation, color });
   };
 

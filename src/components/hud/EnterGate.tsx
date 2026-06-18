@@ -17,14 +17,14 @@ export function EnterGate() {
       <div className="enter-panel">
         <div className="enter-header">Costco Chaos</div>
         <p className="enter-body">
-          Navigate the parking lot, enter the warehouse, and collect your manifest
-          items before stress wins.
+          You grabbed a cart in the parking lot. Survive the crowd, make it inside,
+          and collect everything on your list before your mental health runs out.
         </p>
         <button type="button" className="enter-button" onClick={() => void handleEnter()}>
-          Start Shift
+          Start Shopping
         </button>
         <p className="enter-fine-print">
-          W/↑ forward · S/↓ back · A/← left · D/→ right · Follow glowing products on shelves
+          Bump into other shoppers and your mental health drops. Keep the cart moving.
         </p>
       </div>
     </div>

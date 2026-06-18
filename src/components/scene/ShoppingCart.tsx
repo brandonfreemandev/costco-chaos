@@ -19,25 +19,12 @@ import {
   REVERSE_ACCEL,
   TURN_RATE,
 } from '../../systems/physicsController';
-import { handleCollision } from '../../systems/handleCollision';
-
-import {
-  PLAYER_SPAWN,
-  WAREHOUSE_INTERIOR_SPAWN,
-} from './parkingLotLayout';
+import { tryHandlePlayerNpcCollision } from '../../systems/handleCollision';
+import { PLAYER_SPAWN, WAREHOUSE_INTERIOR_SPAWN } from './parkingLotLayout';
 
 const yawQuat = new THREE.Quaternion();
 const euler = new THREE.Euler(0, 0, 0, 'YXZ');
 const positionVec = new THREE.Vector3();
-
-const SPAWN = {
-  PARKING: PLAYER_SPAWN,
-  SHOPPING: WAREHOUSE_INTERIOR_SPAWN,
-} as const;
-
-function isActivePhase(phase: string) {
-  return phase === 'PARKING' || phase === 'SHOPPING';
-}
 
 export function ShoppingCart() {
   const bodyRef = useRef<RapierRigidBody>(null);
@@ -46,27 +33,40 @@ export function ShoppingCart() {
   const inventoryWeight = usePlayerStore((s) => s.inventory.itemsRemaining * 4);
   const phase = useGameStore((s) => s.phase);
   const lastCollisionAt = useRef(0);
-  const yawRef = useRef(0);
-  const lastPhase = useRef(phase);
+  const yawRef = useRef(PLAYER_SPAWN.yaw);
+  const lastPhase = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!isActivePhase(phase)) return;
     const body = bodyRef.current;
     if (!body) return;
 
-    const spawn = phase === 'SHOPPING' ? SPAWN.SHOPPING : SPAWN.PARKING;
-    yawRef.current = spawn.yaw;
-    body.setTranslation({ x: spawn.x, y: CART_HEIGHT, z: spawn.z }, true);
-    body.setLinvel({ x: 0, y: 0, z: 0 }, true);
-    euler.set(0, spawn.yaw, 0);
-    yawQuat.setFromEuler(euler);
-    body.setRotation({ x: yawQuat.x, y: yawQuat.y, z: yawQuat.z, w: yawQuat.w }, true);
+    if (phase === 'PARKING' && lastPhase.current !== 'PARKING') {
+      yawRef.current = PLAYER_SPAWN.yaw;
+      body.setTranslation({ x: PLAYER_SPAWN.x, y: CART_HEIGHT, z: PLAYER_SPAWN.z }, true);
+      body.setLinvel({ x: 0, y: 0, z: 0 }, true);
+      euler.set(0, PLAYER_SPAWN.yaw, 0);
+      yawQuat.setFromEuler(euler);
+      body.setRotation({ x: yawQuat.x, y: yawQuat.y, z: yawQuat.z, w: yawQuat.w }, true);
+    }
+
+    if (phase === 'SHOPPING' && lastPhase.current !== 'SHOPPING') {
+      yawRef.current = WAREHOUSE_INTERIOR_SPAWN.yaw;
+      body.setTranslation(
+        { x: WAREHOUSE_INTERIOR_SPAWN.x, y: CART_HEIGHT, z: WAREHOUSE_INTERIOR_SPAWN.z },
+        true,
+      );
+      body.setLinvel({ x: 0, y: 0, z: 0 }, true);
+      euler.set(0, WAREHOUSE_INTERIOR_SPAWN.yaw, 0);
+      yawQuat.setFromEuler(euler);
+      body.setRotation({ x: yawQuat.x, y: yawQuat.y, z: yawQuat.z, w: yawQuat.w }, true);
+    }
+
     lastPhase.current = phase;
   }, [phase]);
 
   useFrame((_, delta) => {
     const body = bodyRef.current;
-    if (!body || !isActivePhase(phase)) return;
+    if (!body || (phase !== 'PARKING' && phase !== 'SHOPPING')) return;
 
     const input = getCartInput();
     const effectiveMass = getCartMass(inventoryWeight);
@@ -128,13 +128,17 @@ export function ShoppingCart() {
     }
   });
 
+  if (phase !== 'PARKING' && phase !== 'SHOPPING') return null;
+
+  const spawn = phase === 'PARKING' ? PLAYER_SPAWN : WAREHOUSE_INTERIOR_SPAWN;
+
   return (
     <RigidBody
       ref={bodyRef}
       type="dynamic"
       colliders="cuboid"
       args={[0.55, 0.9, 0.95]}
-      position={[SPAWN.PARKING.x, CART_HEIGHT, SPAWN.PARKING.z]}
+      position={[spawn.x, CART_HEIGHT, spawn.z]}
       mass={mass}
       friction={0.85}
       restitution={0}
@@ -144,21 +148,20 @@ export function ShoppingCart() {
       gravityScale={0}
       collisionGroups={interactionGroups(COLLISION_GROUP.PLAYER, [COLLISION_GROUP.NPC, COLLISION_GROUP.STATIC])}
       onCollisionEnter={({ other }) => {
-        const otherBody = other.rigidBody;
-        const userData = otherBody?.userData as { isNpc?: boolean; cartLoad?: number } | undefined;
-        if (!otherBody || !userData?.isNpc) return;
-
         const now = performance.now();
-        if (now - lastCollisionAt.current < 400) return;
-        lastCollisionAt.current = now;
+        if (now - lastCollisionAt.current < 350) return;
 
         const body = bodyRef.current;
         if (!body) return;
 
         const playerSpeed = Math.hypot(body.linvel().x, body.linvel().z);
-        const otherLinvel = otherBody.linvel();
-        const entitySpeed = Math.hypot(otherLinvel.x, otherLinvel.z);
-        handleCollision(playerSpeed, entitySpeed, userData.cartLoad ?? 1.5);
+        const otherBody = other.rigidBody;
+        const hit = tryHandlePlayerNpcCollision(
+          playerSpeed,
+          otherBody?.handle,
+          otherBody?.linvel(),
+        );
+        if (hit) lastCollisionAt.current = now;
       }}
     />
   );
