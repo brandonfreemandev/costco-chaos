@@ -93,6 +93,14 @@ export function ShoppingCart() {
     const game = useGameStore.getState();
     if (game.phase !== 'PARKING' && game.phase !== 'SHOPPING' && game.phase !== 'CHECKOUT') return;
 
+    const teleport = useCartTransformStore.getState().takeTeleport();
+    if (teleport) {
+      posRef.current = { x: teleport.x, z: teleport.z };
+      yawRef.current = teleport.yaw;
+      vxRef.current = 0;
+      vzRef.current = 0;
+    }
+
     const dt = Math.min(delta, 0.05);
     const input = getCartInput();
     const effectiveMass = getCartMass(inventoryWeight);

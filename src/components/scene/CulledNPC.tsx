@@ -189,7 +189,7 @@ export function generateWarehouseNPCs(): NPCConfig[] {
 
     if (useCross) {
       const crossZ = CROSS_AISLES_Z[Math.floor(rnd(seed + 2) * CROSS_AISLES_Z.length)];
-      const xStart = -14 + rnd(seed + 3) * 28;
+      const xStart = -11 + rnd(seed + 3) * 22;
       const xEnd = xStart + (rnd(seed + 4) > 0.5 ? 1 : -1) * (6 + rnd(seed + 5) * 10);
       npcs.push({
         id: `wh-cross-${id++}`,

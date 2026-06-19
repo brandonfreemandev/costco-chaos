@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import {
   CHECKOUT_LANE_IDS,
   CHECKOUT_LANE_X,
+  isInCheckoutApproach,
 } from '../components/scene/checkoutLayout';
 import {
   checkoutStressDrain,
@@ -43,8 +44,6 @@ interface CheckoutStore {
   rushCooldown: number;
   laneSwitchCount: number;
   initLanes: () => void;
-  /** Dev skip — same crowds, no shortest-lane pick, never 0 carts ahead. */
-  initLanesForDevSkip: () => void;
   tick: (dt: number, px: number, pz: number) => void;
   switchToLane: (laneId: string) => void;
   reset: () => void;
@@ -72,10 +71,6 @@ function pickMedianLane(lanes: SimCheckoutLane[]): SimCheckoutLane {
 function estimateWait(lane: SimCheckoutLane, slotsFromFront: number): number {
   const perCustomer = 3.2 / lane.cashierSpeed;
   return slotsFromFront * perCustomer + lane.processingRemaining + lane.priceCheckRemaining;
-}
-
-function playerSlotsBehind(lane: SimCheckoutLane): number {
-  return lane.customersAhead + (isRegisterBusy(lane) ? 1 : 0);
 }
 
 function startTransaction(lane: SimCheckoutLane): void {
@@ -128,9 +123,6 @@ function maybeCloseLane(lanes: SimCheckoutLane[], playerLaneId: string | null): 
   return pickLaneClosedLine(victim.id);
 }
 
-const DEV_SKIP_LANE_ID = '3';
-const DEV_SKIP_MIN_AHEAD = 2;
-
 function buildInitialLanes(): SimCheckoutLane[] {
   prevPriceCheckRemaining.clear();
 
@@ -175,24 +167,6 @@ function baitLaneSwitch(target: SimCheckoutLane): boolean {
   return true;
 }
 
-function prepareDevSkipLane(lanes: SimCheckoutLane[], laneId: string, minSlotsFromFront: number): {
-  lane: SimCheckoutLane;
-  slots: number;
-} | null {
-  const lane = lanes.find((l) => l.id === laneId && l.isOpen) ?? lanes.find((l) => l.isOpen);
-  if (!lane) return null;
-
-  if (!isRegisterBusy(lane)) {
-    startTransaction(lane);
-  }
-  if (lane.customersAhead < minSlotsFromFront) {
-    lane.customersAhead = minSlotsFromFront;
-  }
-
-  const slots = Math.max(minSlotsFromFront, playerSlotsBehind(lane));
-  return { lane, slots };
-}
-
 export const useCheckoutStore = create<CheckoutStore>((set, get) => ({
   lanes: [],
   playerLaneId: null,
@@ -228,28 +202,6 @@ export const useCheckoutStore = create<CheckoutStore>((set, get) => ({
       rushCooldown: 16 + Math.random() * 10,
       laneSwitchCount: 0,
       lastEvent: `Lane ${start.id} — ${slots} carts ahead. No lane is empty. Press 1–6 wisely.`,
-    });
-  },
-
-  initLanesForDevSkip: () => {
-    const lanes = buildInitialLanes();
-    const prepared = prepareDevSkipLane(lanes, DEV_SKIP_LANE_ID, DEV_SKIP_MIN_AHEAD);
-    if (!prepared) return;
-
-    set({
-      lanes,
-      playerLaneId: prepared.lane.id,
-      slotsFromFront: prepared.slots,
-      beingServed: false,
-      serveRemaining: 0,
-      switchCooldown: 0,
-      stressDrainPerSec: 0,
-      stressReason: null,
-      priceCheckOnPlayerLane: false,
-      laneEventCooldown: 24,
-      rushCooldown: 16 + Math.random() * 10,
-      laneSwitchCount: 0,
-      lastEvent: `Dev test — lane ${prepared.lane.id}, ${prepared.slots} carts ahead.`,
     });
   },
 
@@ -309,9 +261,10 @@ export const useCheckoutStore = create<CheckoutStore>((set, get) => ({
     });
   },
 
-  tick: (dt, _px, _pz) => {
+  tick: (dt, px, pz) => {
     if (useGameStore.getState().phase !== 'CHECKOUT') return;
     if (useGameStore.getState().checkoutWon) return;
+    if (!isInCheckoutApproach(px, pz)) return;
 
     const state = get();
     if (state.lanes.length === 0) return;

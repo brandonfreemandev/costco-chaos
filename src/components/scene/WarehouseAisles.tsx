@@ -10,6 +10,7 @@ import { SampleKiosk } from './SampleKiosk';
 import { WarehouseCeilingLights } from './WarehouseCeilingLights';
 import { WarehouseFloorGlow } from './WarehouseFloorGlow';
 import { CheckoutMezzanine } from './CheckoutMezzanine';
+import { PerimeterDepartments } from './PerimeterDepartments';
 import { ShelfWallpaper } from './ShelfWallpaper';
 import { QuestCollectibles } from './ShelfProducts';
 import { RackBulkProps, RackUprights } from './RackBulkProps';
@@ -27,10 +28,6 @@ import {
   SPINE_DEPTH,
   WH_CEILING,
   WH_DEPTH,
-  WH_MAX_X,
-  WH_MAX_Z,
-  WH_MIN_X,
-  WH_MIN_Z,
   WH_WIDTH,
 } from './warehouseLayout';
 
@@ -142,60 +139,6 @@ function AisleSigns() {
   );
 }
 
-function PerimeterWalls() {
-  const h = WH_CEILING - 0.5;
-  const cy = h / 2;
-  const cz = (WH_MIN_Z + WH_MAX_Z) / 2;
-  const mat = { color: '#9ca3af', roughness: 0.88, metalness: 0.06 };
-
-  return (
-    <group>
-      <mesh position={[0, cy, WH_MIN_Z - 0.35]} receiveShadow>
-        <boxGeometry args={[WH_WIDTH + 1, h, 0.5]} />
-        <meshStandardMaterial {...mat} />
-      </mesh>
-      <mesh position={[WH_MIN_X - 0.35, cy, cz]} receiveShadow>
-        <boxGeometry args={[0.5, h, WH_DEPTH]} />
-        <meshStandardMaterial {...mat} />
-      </mesh>
-      <mesh position={[WH_MAX_X + 0.35, cy, cz]} receiveShadow>
-        <boxGeometry args={[0.5, h, WH_DEPTH]} />
-        <meshStandardMaterial {...mat} />
-      </mesh>
-    </group>
-  );
-}
-
-function MeatCooler() {
-  return (
-    <group position={[-11, 0, -24]}>
-      <mesh castShadow position={[0, 2.6, 0]}>
-        <boxGeometry args={[9, 5.2, 7]} />
-        <meshStandardMaterial color="#b8dce8" roughness={0.18} metalness={0.45} envMapIntensity={1.2} />
-      </mesh>
-      <mesh position={[0, 2.6, 3.55]}>
-        <boxGeometry args={[8.4, 4.8, 0.08]} />
-        <meshStandardMaterial
-          color="#e0f2fe"
-          roughness={0.05}
-          metalness={0.2}
-          transparent
-          opacity={0.55}
-          envMapIntensity={1.5}
-        />
-      </mesh>
-      <mesh position={[0, 3.8, 3.2]}>
-        <boxGeometry args={[7.5, 0.5, 0.15]} />
-        <meshStandardMaterial color="#0ea5e9" emissive="#0284c7" emissiveIntensity={0.35} />
-      </mesh>
-      <pointLight position={[0, 3.5, 2]} intensity={0.6} color="#7dd3fc" distance={12} decay={2} />
-      <Text position={[0, 4.2, 3.8]} fontSize={0.38} color="#0ea5e9" anchorX="center">
-        MEAT / ROTISSERIE →
-      </Text>
-    </group>
-  );
-}
-
 export function WarehouseAisles() {
   const rackSegments = useMemo(() => {
     invalidateWarehouseObstacleCache();
@@ -216,8 +159,7 @@ export function WarehouseAisles() {
       <ShelfWallpaper />
       <AisleMarkers />
       <AisleSigns />
-      <PerimeterWalls />
-      <MeatCooler />
+      <PerimeterDepartments />
       <CheckoutMezzanine />
       <WarehouseFloorGlow />
       <WarehouseCeilingLights />

@@ -51,31 +51,19 @@ export const APPROACH_CART_OBSTACLES = [
 /** South aisle entry — clear of quest patrols at (−7.5, 8) and cross-aisle traffic at z ≈ 16. */
 export const WAREHOUSE_INTERIOR_SPAWN = { x: -2.5, z: -23, yaw: Math.PI } as const;
 
-/** Recessed covered entrance — cart collection alcove, doors at back wall. */
-export const ENTRANCE_ALCOVE = {
-  width: 14,
-  depth: 7.2,
-  /** Parking-side mouth (high Z). */
-  mouthZ: BUILDING.frontZ + 0.6,
-  /** Door wall inside the building (low Z). */
-  backZ: BUILDING.frontZ - 6.6,
-  ceilingY: BUILDING.height - 0.35,
-  wallH: 5.4,
-} as const;
-
 export const ENTRANCE_ZONE = {
-  minX: -ENTRANCE_ALCOVE.width / 2 + 0.5,
-  maxX: ENTRANCE_ALCOVE.width / 2 - 0.5,
-  minZ: ENTRANCE_ALCOVE.backZ - 0.6,
-  maxZ: ENTRANCE_ALCOVE.mouthZ + 1.4,
+  minX: -BUILDING.entranceWidth / 2 - 0.4,
+  maxX: BUILDING.entranceWidth / 2 + 0.4,
+  minZ: BUILDING.frontZ - 0.8,
+  maxZ: BUILDING.frontZ + 2.2,
   maxSpeed: 3.5,
 } as const;
 
 export const ENTRANCE_MARKER = {
   x: 0,
-  z: ENTRANCE_ALCOVE.mouthZ + 0.55,
-  width: 6.5,
-  depth: 2.8,
+  z: BUILDING.frontZ + 1.1,
+  width: BUILDING.entranceWidth,
+  depth: 2.4,
 } as const;
 
 export const CAR_COLORS = [

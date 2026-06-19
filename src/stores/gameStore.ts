@@ -94,7 +94,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     useCheckoutStore.getState().reset();
     set({ shoppingListComplete: true, checkoutWon: false, phase: 'CHECKOUT' });
-    useCheckoutStore.getState().initLanesForDevSkip();
+    useCheckoutStore.getState().initLanes();
     usePlayerStore.getState().setZone('CHECKOUT');
     logTransition('Dev shortcut — skipped shopping to checkout (test queue)');
   },

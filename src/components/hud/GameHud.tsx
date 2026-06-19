@@ -79,7 +79,7 @@ export function GameHud() {
 
       {phase === 'PARKING' && !parkingSpotSecured && (
         <div className="toast-banner toast-objective">
-          Target: Green mat in covered entrance. Hazard: Everything. Press I to skip inside (dev).
+          Target: Green mat at entrance doors. Hazard: Everything. Press I to skip inside (dev).
         </div>
       )}
 

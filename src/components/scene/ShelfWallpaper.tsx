@@ -8,8 +8,11 @@ const FACE_OFFSET = SPINE_DEPTH / 2 + 0.02;
 const DEPARTMENTS = [
   { name: 'bakery' as const, zMin: 16, zMax: Infinity },
   { name: 'electronics' as const, zMin: 4, zMax: 16 },
-  { name: 'bulkPaper' as const, zMin: -8, zMax: 4 },
-  { name: 'sample' as const, zMin: -Infinity, zMax: -8 },
+  { name: 'grocery' as const, zMin: -2, zMax: 4 },
+  { name: 'bulkPaper' as const, zMin: -8, zMax: -2 },
+  { name: 'sample' as const, zMin: -12, zMax: -8 },
+  { name: 'dairy' as const, zMin: -18, zMax: -12 },
+  { name: 'frozen' as const, zMin: -Infinity, zMax: -18 },
 ];
 
 function createMaterial(tex: THREE.Texture) {

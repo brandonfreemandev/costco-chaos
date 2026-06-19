@@ -1,7 +1,6 @@
 import {
   APPROACH_CART_OBSTACLES,
   BUILDING,
-  ENTRANCE_ALCOVE,
   generateParkedCars,
   LOT,
 } from '../components/scene/parkingLotLayout';
@@ -64,7 +63,7 @@ export function getWarehouseObstacles(): Aabb[] {
   for (const seg of buildRackSegments()) {
     boxes.push(rackAabb(seg.x, seg.z0, seg.z1));
   }
-  boxes.push(blockAabb(-11, -24, 9, 7));
+  boxes.push(blockAabb(-11, WH_MIN_Z + 0.95, 6.5, 1.0));
   boxes.push({ minX: WH_MIN_X, maxX: WH_MAX_X, minZ: WH_MIN_Z - 1, maxZ: WH_MIN_Z + 0.5 });
   boxes.push({ minX: WH_MIN_X, maxX: WH_MAX_X, minZ: WH_MAX_Z - 0.5, maxZ: WH_MAX_Z + 1 });
   boxes.push({ minX: WH_MIN_X - 1, maxX: WH_MIN_X + 0.5, minZ: WH_MIN_Z, maxZ: WH_MAX_Z });
@@ -84,16 +83,7 @@ export function getParkingObstacles(): Aabb[] {
   for (const cart of APPROACH_CART_OBSTACLES) {
     boxes.push(blockAabb(cart.x, cart.z, 0.65, 1.0));
   }
-  // Building shell — wings + back block; recessed entrance alcove stays walkable
-  const bHalf = BUILDING.width / 2;
-  const aHalf = ENTRANCE_ALCOVE.width / 2;
-  const wingW = bHalf - aHalf;
-  const wingX = aHalf + wingW / 2;
-  boxes.push(blockAabb(-wingX, BUILDING.centerZ, wingW, BUILDING.depth));
-  boxes.push(blockAabb(wingX, BUILDING.centerZ, wingW, BUILDING.depth));
-  const backMinZ = BUILDING.centerZ - BUILDING.depth / 2;
-  const backMaxZ = ENTRANCE_ALCOVE.backZ - 0.5;
-  boxes.push(blockAabb(0, (backMinZ + backMaxZ) / 2, BUILDING.width, backMaxZ - backMinZ));
+  boxes.push(blockAabb(0, BUILDING.centerZ, BUILDING.width, BUILDING.depth));
   boxes.push({ minX: LOT.minX - 1, maxX: LOT.maxX + 1, minZ: LOT.minZ - 1, maxZ: LOT.minZ + 0.5 });
   boxes.push({ minX: LOT.minX - 1, maxX: LOT.maxX + 1, minZ: LOT.maxZ - 0.5, maxZ: LOT.maxZ + 1 });
   boxes.push({ minX: LOT.minX - 1, maxX: LOT.minX + 0.5, minZ: LOT.minZ, maxZ: LOT.maxZ });
