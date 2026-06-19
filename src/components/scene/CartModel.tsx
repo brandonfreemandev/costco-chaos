@@ -1,97 +1,103 @@
 import { useMemo } from 'react';
 import * as THREE from 'three';
 
-const FRAME = { color: '#6b7280', roughness: 0.38, metalness: 0.72, envMapIntensity: 1.2 };
+const FRAME = { color: '#707780', roughness: 0.38, metalness: 0.72, envMapIntensity: 1.2 };
 const BASKET = { color: '#8a9098', roughness: 0.45, metalness: 0.55 };
+const WIRE = { color: '#9aa0a8', roughness: 0.42, metalness: 0.62 };
 const HANDLE = { color: '#c41e3a', roughness: 0.35, metalness: 0.25 };
 const WHEEL = { color: '#2a2d32', roughness: 0.65, metalness: 0.35 };
+const SHELF = { color: '#5c6370', roughness: 0.5, metalness: 0.58 };
 
 /** Wheel centre height — wheel bottom sits at y=0 (ground). */
-export const CART_WHEEL_Y = 0.09;
+export const CART_WHEEL_Y = 0.1;
 
 /** Rigid-body Y when parent floor is at `floorY`. */
 export function cartBodyY(floorY = 0): number {
-  return floorY + CART_WHEEL_Y + 0.36;
+  return floorY + CART_WHEEL_Y + 0.42;
 }
 
 /**
- * Costco wire cart mesh. Local origin = ground under wheels.
- * Parent rigid body should be at `cartBodyY(floorY)`.
+ * Costco bulk wire cart — deep basket, lower stow shelf, red push handle.
+ * Local origin = ground under wheels.
  */
 export function CartModel({ showHandle = true }: { showHandle?: boolean }) {
-  const wheelGeo = useMemo(() => new THREE.CylinderGeometry(0.09, 0.09, 0.06, 12), []);
+  const wheelGeo = useMemo(() => new THREE.CylinderGeometry(0.1, 0.1, 0.07, 12), []);
 
   const postPositions: [number, number, number][] = [
-    [-0.3, 0.45, 0.46],
-    [0.3, 0.45, 0.46],
-    [-0.3, 0.45, -0.34],
-    [0.3, 0.45, -0.34],
+    [-0.36, 0.52, 0.58],
+    [0.36, 0.52, 0.58],
+    [-0.36, 0.52, -0.42],
+    [0.36, 0.52, -0.42],
   ];
 
   const wheelPositions: [number, number, number][] = [
-    [-0.24, CART_WHEEL_Y, 0.4],
-    [0.24, CART_WHEEL_Y, 0.4],
-    [-0.24, CART_WHEEL_Y, -0.26],
-    [0.24, CART_WHEEL_Y, -0.26],
+    [-0.28, CART_WHEEL_Y, 0.5],
+    [0.28, CART_WHEEL_Y, 0.5],
+    [-0.28, CART_WHEEL_Y, -0.34],
+    [0.28, CART_WHEEL_Y, -0.34],
   ];
 
   return (
     <group>
-      {/* Wheels */}
       {wheelPositions.map((pos, i) => (
         <mesh key={`wheel-${i}`} castShadow position={pos} rotation={[0, 0, Math.PI / 2]} geometry={wheelGeo}>
           <meshStandardMaterial {...WHEEL} />
         </mesh>
       ))}
 
-      {/* Bottom chassis rails */}
-      <mesh castShadow position={[0, 0.17, 0.06]}>
-        <boxGeometry args={[0.58, 0.04, 0.84]} />
-        <meshStandardMaterial {...FRAME} />
+      {/* Lower stow deck — bulk cases / water flats */}
+      <mesh castShadow position={[0, 0.2, 0.1]}>
+        <boxGeometry args={[0.72, 0.04, 1.02]} />
+        <meshStandardMaterial {...SHELF} />
       </mesh>
-      <mesh castShadow position={[0, 0.17, 0.5]}>
-        <boxGeometry args={[0.58, 0.04, 0.04]} />
+      <mesh castShadow position={[0, 0.14, 0.1]}>
+        <boxGeometry args={[0.68, 0.08, 0.96]} />
         <meshStandardMaterial {...FRAME} />
       </mesh>
 
-      {/* Corner posts — base (0.22) to top rail (0.68) */}
       {postPositions.map((pos, i) => (
         <mesh key={`post-${i}`} castShadow position={pos}>
-          <boxGeometry args={[0.04, 0.46, 0.04]} />
+          <boxGeometry args={[0.045, 0.56, 0.045]} />
           <meshStandardMaterial {...FRAME} />
         </mesh>
       ))}
 
-      {/* Basket — rests on chassis, inside posts */}
-      <mesh castShadow position={[0, 0.44, 0.06]}>
-        <boxGeometry args={[0.58, 0.34, 0.84]} />
+      {/* Deep main basket */}
+      <mesh castShadow position={[0, 0.52, 0.1]}>
+        <boxGeometry args={[0.72, 0.44, 1.02]} />
         <meshStandardMaterial {...BASKET} />
       </mesh>
 
-      {/* Top rim */}
-      <mesh castShadow position={[0, 0.68, 0.06]}>
-        <boxGeometry args={[0.64, 0.04, 0.9]} />
+      {/* Wire slats — read as mesh, not solid block */}
+      {[-0.22, 0, 0.22].map((yOff) => (
+        <mesh key={`slat-${yOff}`} castShadow position={[0, 0.38 + yOff, 0.1]}>
+          <boxGeometry args={[0.68, 0.025, 0.98]} />
+          <meshStandardMaterial {...WIRE} />
+        </mesh>
+      ))}
+
+      {/* Top rim + child seat flap */}
+      <mesh castShadow position={[0, 0.78, 0.1]}>
+        <boxGeometry args={[0.78, 0.045, 1.08]} />
         <meshStandardMaterial {...FRAME} />
       </mesh>
-
-      {/* Child seat back */}
-      <mesh castShadow position={[0, 0.54, -0.28]} rotation={[0.35, 0, 0]}>
-        <boxGeometry args={[0.46, 0.04, 0.2]} />
+      <mesh castShadow position={[0, 0.62, -0.38]} rotation={[0.32, 0, 0]}>
+        <boxGeometry args={[0.56, 0.035, 0.24]} />
         <meshStandardMaterial color="#4b5563" roughness={0.55} />
       </mesh>
 
       {showHandle && (
         <>
-          <mesh castShadow position={[0, 0.82, -0.4]}>
-            <boxGeometry args={[0.72, 0.05, 0.05]} />
+          <mesh castShadow position={[0, 0.94, -0.48]}>
+            <boxGeometry args={[0.86, 0.055, 0.055]} />
             <meshStandardMaterial {...HANDLE} />
           </mesh>
-          <mesh castShadow position={[-0.34, 0.72, -0.34]} rotation={[0.4, 0, 0]}>
-            <boxGeometry args={[0.05, 0.24, 0.05]} />
+          <mesh castShadow position={[-0.4, 0.82, -0.42]} rotation={[0.42, 0, 0]}>
+            <boxGeometry args={[0.055, 0.28, 0.055]} />
             <meshStandardMaterial {...HANDLE} />
           </mesh>
-          <mesh castShadow position={[0.34, 0.72, -0.34]} rotation={[0.4, 0, 0]}>
-            <boxGeometry args={[0.05, 0.24, 0.05]} />
+          <mesh castShadow position={[0.4, 0.82, -0.42]} rotation={[0.42, 0, 0]}>
+            <boxGeometry args={[0.055, 0.28, 0.055]} />
             <meshStandardMaterial {...HANDLE} />
           </mesh>
         </>

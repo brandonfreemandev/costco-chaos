@@ -24,6 +24,13 @@ export const CHECKOUT_APPROACH = {
 } as const;
 
 export const CHECKOUT_LANE_X = [-12.5, -7.5, -2.5, 2.5, 7.5, 12.5] as const;
+
+/** Dev shortcut spawn — front court facing the lanes (yaw = Math.PI → north). */
+export const CHECKOUT_DEV_SPAWN = {
+  x: CHECKOUT_LANE_X[2],
+  z: CHECKOUT_MEZZANINE.centerZ - 1.2,
+  yaw: Math.PI,
+} as const;
 export const CHECKOUT_LANE_IDS = ['1', '2', '3', '4', '5', '6'] as const;
 
 export const LANE_HALF_WIDTH = 2.2;

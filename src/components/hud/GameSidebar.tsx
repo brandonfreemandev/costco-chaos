@@ -116,6 +116,7 @@ export function GameSidebar() {
             <span>A/D Steer</span>
             <span>1–6 Lanes</span>
             <span>I Skip inside</span>
+            {phase === 'SHOPPING' && <span>O Test checkout</span>}
           </div>
         </footer>
       </div>

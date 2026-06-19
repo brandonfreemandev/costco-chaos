@@ -52,8 +52,8 @@ export function ShopperAvatar({
       </mesh>
 
       {hasCart && (
-        <group position={[0, SHOPPER_FOOT_LOCAL_Y, 0.78]} rotation={[0, Math.PI, 0]}>
-          <CartModel showHandle={false} />
+        <group position={[0, SHOPPER_FOOT_LOCAL_Y, 0.58]}>
+          <CartModel showHandle />
         </group>
       )}
     </group>

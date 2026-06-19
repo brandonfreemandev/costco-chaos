@@ -10,7 +10,7 @@ export function BumpFlash() {
     <>
       <div className="bump-vignette" style={{ opacity: bumpFlash * 0.85 }} aria-hidden />
       {lastMessage && bumpFlash > 0 && (
-        <div className="bump-toast">{lastMessage}</div>
+        <div className={`bump-toast ${bumpFlash > 0.7 ? 'bump-toast-checkout' : ''}`}>{lastMessage}</div>
       )}
     </>
   );

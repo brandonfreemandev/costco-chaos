@@ -3,6 +3,16 @@ import {
   CHECKOUT_LANE_IDS,
   CHECKOUT_LANE_X,
 } from '../components/scene/checkoutLayout';
+import {
+  checkoutStressDrain,
+  checkoutStressReason,
+  pickLaneClosedLine,
+  pickLaneSwitchRegretLine,
+  pickLaneSwitchBaitLine,
+  pickPriceCheckLine,
+  pickRushHourLine,
+  PRICE_CHECK_SPIKE,
+} from '../systems/checkoutStress';
 import { useGameStore } from './gameStore';
 import { usePlayerStore } from './playerStore';
 import { useUIStore } from './uiStore';
@@ -12,7 +22,6 @@ export interface SimCheckoutLane {
   x: number;
   isOpen: boolean;
   cashierSpeed: number;
-  /** Shoppers waiting behind the person currently at the register. */
   customersAhead: number;
   processingRemaining: number;
   priceCheckRemaining: number;
@@ -22,33 +31,42 @@ export interface SimCheckoutLane {
 interface CheckoutStore {
   lanes: SimCheckoutLane[];
   playerLaneId: string | null;
-  /** How many people (including active register scan) are ahead of the player. */
   slotsFromFront: number;
   beingServed: boolean;
   serveRemaining: number;
   switchCooldown: number;
   lastEvent: string | null;
+  stressDrainPerSec: number;
+  stressReason: string | null;
+  priceCheckOnPlayerLane: boolean;
+  laneEventCooldown: number;
+  rushCooldown: number;
+  laneSwitchCount: number;
   initLanes: () => void;
+  /** Dev skip — same crowds, no shortest-lane pick, never 0 carts ahead. */
+  initLanesForDevSkip: () => void;
   tick: (dt: number, px: number, pz: number) => void;
   switchToLane: (laneId: string) => void;
   reset: () => void;
 }
 
-function seededQueue(seed: number): number {
-  return seed % 4;
+const prevPriceCheckRemaining = new Map<string, number>();
+
+/** Per-lane starting queue — no lane is a free empty win (lane 4 was always 0). */
+const LANE_START_QUEUE = [2, 3, 2, 3, 1, 2] as const;
+
+function laneDepth(lane: SimCheckoutLane): number {
+  return lane.customersAhead + (isRegisterBusy(lane) ? 1 : 0);
 }
 
 function isRegisterBusy(lane: SimCheckoutLane): boolean {
   return lane.processingRemaining > 0 || lane.priceCheckRemaining > 0;
 }
 
-function pickShortestLane(lanes: SimCheckoutLane[]): SimCheckoutLane {
+function pickMedianLane(lanes: SimCheckoutLane[]): SimCheckoutLane {
   const open = lanes.filter((l) => l.isOpen);
-  return open.reduce((best, lane) => {
-    const bestDepth = best.customersAhead + (isRegisterBusy(best) ? 1 : 0);
-    const laneDepth = lane.customersAhead + (isRegisterBusy(lane) ? 1 : 0);
-    return laneDepth < bestDepth ? lane : best;
-  });
+  const sorted = [...open].sort((a, b) => laneDepth(a) - laneDepth(b));
+  return sorted[Math.floor(sorted.length / 2)] ?? open[0];
 }
 
 function estimateWait(lane: SimCheckoutLane, slotsFromFront: number): number {
@@ -61,8 +79,8 @@ function playerSlotsBehind(lane: SimCheckoutLane): number {
 }
 
 function startTransaction(lane: SimCheckoutLane): void {
-  if (Math.random() < 0.14) {
-    lane.priceCheckRemaining = 4 + Math.random() * 5;
+  if (Math.random() < 0.18) {
+    lane.priceCheckRemaining = 4 + Math.random() * 6;
     lane.priceCheckLabel = 'PRICE CHECK';
     return;
   }
@@ -87,6 +105,94 @@ function finishRegisterTransaction(
   return nextSlots;
 }
 
+function applyCheckoutDamage(amount: number, message: string, flash = 0.75): void {
+  usePlayerStore.getState().damageMentalHealth(amount);
+  useUIStore.getState().triggerCheckoutStress(message, flash);
+}
+
+function maybeCloseLane(lanes: SimCheckoutLane[], playerLaneId: string | null): string | null {
+  const open = lanes.filter((l) => l.isOpen);
+  if (open.length <= 2 || Math.random() > 0.35) return null;
+
+  const victim = open[Math.floor(Math.random() * open.length)];
+  victim.isOpen = false;
+  victim.processingRemaining = 0;
+  victim.priceCheckRemaining = 0;
+  victim.priceCheckLabel = null;
+
+  if (victim.id === playerLaneId) {
+    applyCheckoutDamage(14, pickLaneClosedLine(victim.id), 0.95);
+    return `YOUR lane ${victim.id} closed — press 1–6 immediately.`;
+  }
+
+  return pickLaneClosedLine(victim.id);
+}
+
+const DEV_SKIP_LANE_ID = '3';
+const DEV_SKIP_MIN_AHEAD = 2;
+
+function buildInitialLanes(): SimCheckoutLane[] {
+  prevPriceCheckRemaining.clear();
+
+  return CHECKOUT_LANE_X.map((x, i) => {
+    const ahead = LANE_START_QUEUE[i] ?? 2;
+    const lane: SimCheckoutLane = {
+      id: CHECKOUT_LANE_IDS[i],
+      x,
+      isOpen: i !== 5 || Math.random() > 0.4,
+      cashierSpeed: 0.5 + Math.random() * 0.4,
+      customersAhead: ahead,
+      processingRemaining: 0,
+      priceCheckRemaining: 0,
+      priceCheckLabel: null,
+    };
+    if (lane.isOpen) {
+      startTransaction(lane);
+    }
+    prevPriceCheckRemaining.set(lane.id, lane.priceCheckRemaining);
+    return lane;
+  });
+}
+
+function rushRandomLanes(lanes: SimCheckoutLane[], count: number): void {
+  const open = lanes.filter((l) => l.isOpen);
+  for (let n = 0; n < count && open.length > 0; n += 1) {
+    const lane = open[Math.floor(Math.random() * open.length)];
+    lane.customersAhead += 1;
+    if (!isRegisterBusy(lane)) {
+      startTransaction(lane);
+    }
+  }
+}
+
+function baitLaneSwitch(target: SimCheckoutLane): boolean {
+  if (laneDepth(target) > 1) return false;
+  const bump = 2 + Math.floor(Math.random() * 3);
+  target.customersAhead += bump;
+  if (!isRegisterBusy(target)) {
+    startTransaction(target);
+  }
+  return true;
+}
+
+function prepareDevSkipLane(lanes: SimCheckoutLane[], laneId: string, minSlotsFromFront: number): {
+  lane: SimCheckoutLane;
+  slots: number;
+} | null {
+  const lane = lanes.find((l) => l.id === laneId && l.isOpen) ?? lanes.find((l) => l.isOpen);
+  if (!lane) return null;
+
+  if (!isRegisterBusy(lane)) {
+    startTransaction(lane);
+  }
+  if (lane.customersAhead < minSlotsFromFront) {
+    lane.customersAhead = minSlotsFromFront;
+  }
+
+  const slots = Math.max(minSlotsFromFront, playerSlotsBehind(lane));
+  return { lane, slots };
+}
+
 export const useCheckoutStore = create<CheckoutStore>((set, get) => ({
   lanes: [],
   playerLaneId: null,
@@ -95,30 +201,19 @@ export const useCheckoutStore = create<CheckoutStore>((set, get) => ({
   serveRemaining: 0,
   switchCooldown: 0,
   lastEvent: null,
+  stressDrainPerSec: 0,
+  stressReason: null,
+  priceCheckOnPlayerLane: false,
+  laneEventCooldown: 24,
+  rushCooldown: 18,
+  laneSwitchCount: 0,
 
   initLanes: () => {
     if (get().lanes.length > 0) return;
 
-    const lanes: SimCheckoutLane[] = CHECKOUT_LANE_X.map((x, i) => {
-      const ahead = seededQueue(i * 7 + 3);
-      const lane: SimCheckoutLane = {
-        id: CHECKOUT_LANE_IDS[i],
-        x,
-        isOpen: i !== 5 || Math.random() > 0.35,
-        cashierSpeed: 0.55 + Math.random() * 0.35,
-        customersAhead: ahead,
-        processingRemaining: 0,
-        priceCheckRemaining: 0,
-        priceCheckLabel: null,
-      };
-      if (lane.isOpen && (ahead > 0 || i % 2 === 0)) {
-        startTransaction(lane);
-      }
-      return lane;
-    });
-
-    const start = pickShortestLane(lanes);
-    const slots = playerSlotsBehind(start);
+    const lanes = buildInitialLanes();
+    const start = pickMedianLane(lanes);
+    const slots = laneDepth(start);
     set({
       lanes,
       playerLaneId: start.id,
@@ -126,7 +221,35 @@ export const useCheckoutStore = create<CheckoutStore>((set, get) => ({
       beingServed: false,
       serveRemaining: 0,
       switchCooldown: 0,
-      lastEvent: `Lane ${start.id} assigned — ${slots} carts ahead. Press 1–6 to switch lanes.`,
+      stressDrainPerSec: 0,
+      stressReason: null,
+      priceCheckOnPlayerLane: false,
+      laneEventCooldown: 24,
+      rushCooldown: 16 + Math.random() * 10,
+      laneSwitchCount: 0,
+      lastEvent: `Lane ${start.id} — ${slots} carts ahead. No lane is empty. Press 1–6 wisely.`,
+    });
+  },
+
+  initLanesForDevSkip: () => {
+    const lanes = buildInitialLanes();
+    const prepared = prepareDevSkipLane(lanes, DEV_SKIP_LANE_ID, DEV_SKIP_MIN_AHEAD);
+    if (!prepared) return;
+
+    set({
+      lanes,
+      playerLaneId: prepared.lane.id,
+      slotsFromFront: prepared.slots,
+      beingServed: false,
+      serveRemaining: 0,
+      switchCooldown: 0,
+      stressDrainPerSec: 0,
+      stressReason: null,
+      priceCheckOnPlayerLane: false,
+      laneEventCooldown: 24,
+      rushCooldown: 16 + Math.random() * 10,
+      laneSwitchCount: 0,
+      lastEvent: `Dev test — lane ${prepared.lane.id}, ${prepared.slots} carts ahead.`,
     });
   },
 
@@ -140,35 +263,50 @@ export const useCheckoutStore = create<CheckoutStore>((set, get) => ({
     if (!target || !current || !target.isOpen || target.id === current.id) return;
 
     const oldWait = estimateWait(current, state.slotsFromFront);
-    const newSlots = playerSlotsBehind(target);
+    let newSlots = laneDepth(target);
+    const baited = baitLaneSwitch(target);
+    if (baited) {
+      newSlots = laneDepth(target);
+    }
     const newWait = estimateWait(target, newSlots);
     const regret = newWait - oldWait;
 
-    let message = `Lane ${laneId} — ${newSlots} carts ahead.`;
-    if (regret > 2) {
+    let message = baited
+      ? pickLaneSwitchBaitLine()
+      : `Lane ${laneId} — ${newSlots} carts ahead.`;
+    let damage = 2;
+
+    if (!baited && regret > 2) {
       message += ' Regret index: HIGH.';
-      usePlayerStore.getState().damageMentalHealth(5);
-    } else if (regret < -1) {
-      message += ' This line looks faster.';
+      damage = 6;
+    } else if (!baited && regret < -1) {
+      message += ' This line looked faster…';
+      damage = 3;
+    } else if (!baited) {
+      message += ` ${pickLaneSwitchRegretLine()}`;
     } else {
-      usePlayerStore.getState().damageMentalHealth(2);
+      damage = 5;
     }
 
-    if (Math.random() < 0.2) {
-      target.priceCheckRemaining = 5 + Math.random() * 4;
+    if (Math.random() < 0.28) {
+      target.priceCheckRemaining = 5 + Math.random() * 5;
       target.priceCheckLabel = 'PRICE CHECK';
-      message = `Lane ${laneId} — price check. Of course.`;
-      usePlayerStore.getState().damageMentalHealth(6);
+      prevPriceCheckRemaining.set(target.id, target.priceCheckRemaining);
+      message = pickPriceCheckLine();
+      damage = 8;
+      newSlots = laneDepth(target);
     }
+
+    applyCheckoutDamage(damage, message, regret > 2 || baited ? 0.85 : 0.55);
 
     set({
       lanes,
       playerLaneId: laneId,
       slotsFromFront: newSlots,
       switchCooldown: 4,
+      laneSwitchCount: state.laneSwitchCount + 1,
       lastEvent: message,
     });
-    useUIStore.setState({ lastCollisionMessage: message });
   },
 
   tick: (dt, _px, _pz) => {
@@ -179,10 +317,27 @@ export const useCheckoutStore = create<CheckoutStore>((set, get) => ({
     if (state.lanes.length === 0) return;
 
     const lanes = state.lanes.map((l) => ({ ...l }));
-    let { playerLaneId, slotsFromFront, beingServed, serveRemaining, switchCooldown, lastEvent } = state;
+    let { playerLaneId, slotsFromFront, beingServed, serveRemaining, switchCooldown, lastEvent, laneSwitchCount } =
+      state;
+    let laneEventCooldown = state.laneEventCooldown - dt;
+    let rushCooldown = state.rushCooldown - dt;
+
+    if (rushCooldown <= 0 && !beingServed) {
+      rushRandomLanes(lanes, 2 + Math.floor(Math.random() * 2));
+      lastEvent = pickRushHourLine();
+      rushCooldown = 14 + Math.random() * 12;
+    }
 
     for (const lane of lanes) {
-      if (!lane.isOpen || beingServed && lane.id === playerLaneId) continue;
+      const prevPc = prevPriceCheckRemaining.get(lane.id) ?? 0;
+      if (lane.priceCheckRemaining > 0 && prevPc <= 0 && lane.id === playerLaneId && slotsFromFront <= 1) {
+        const line = pickPriceCheckLine();
+        applyCheckoutDamage(PRICE_CHECK_SPIKE, line, 0.9);
+        lastEvent = line;
+      }
+      prevPriceCheckRemaining.set(lane.id, lane.priceCheckRemaining);
+
+      if (!lane.isOpen || (beingServed && lane.id === playerLaneId)) continue;
 
       if (lane.priceCheckRemaining > 0) {
         lane.priceCheckRemaining = Math.max(0, lane.priceCheckRemaining - dt);
@@ -208,24 +363,59 @@ export const useCheckoutStore = create<CheckoutStore>((set, get) => ({
       }
     }
 
+    if (laneEventCooldown <= 0 && !beingServed) {
+      const closedMsg = maybeCloseLane(lanes, playerLaneId);
+      if (closedMsg) {
+        lastEvent = closedMsg;
+        laneEventCooldown = 22 + Math.random() * 18;
+      } else {
+        laneEventCooldown = 12 + Math.random() * 8;
+      }
+    }
+
     const myLane = lanes.find((l) => l.id === playerLaneId);
+    const priceCheckOnPlayerLane = Boolean(myLane?.isOpen && (myLane.priceCheckRemaining ?? 0) > 0);
+
     if (myLane?.isOpen && !beingServed && slotsFromFront === 0 && !isRegisterBusy(myLane)) {
       beingServed = true;
-      serveRemaining = 3.2 / myLane.cashierSpeed;
+      const haulPenalty = usePlayerStore.getState().inventory.items.length * 0.35;
+      const switchPenalty = laneSwitchCount * 0.45;
+      serveRemaining = (3.4 + haulPenalty + switchPenalty) / myLane.cashierSpeed;
       lastEvent = 'Cashier scanning your absurd haul…';
     }
 
+    let stressDrainPerSec = 0;
+    let stressReason: string | null = null;
+
     if (beingServed) {
       serveRemaining = Math.max(0, serveRemaining - dt);
+      const scanDrain = 0.45 * dt;
+      usePlayerStore.getState().damageMentalHealth(scanDrain);
+      stressDrainPerSec = 0.45;
+      stressReason = 'Item-by-item judgment';
       if (serveRemaining === 0) {
         useGameStore.setState({ checkoutWon: true });
         useUIStore.setState({
           lastCollisionMessage: 'Transaction complete. Receipt spiritually $847.',
+          healFlash: 1,
+          bumpFlash: 0,
         });
+        window.setTimeout(() => useUIStore.setState({ healFlash: 0 }), 800);
       }
     } else if (myLane?.isOpen) {
-      const drain = (1.35 + slotsFromFront * 0.5) * dt;
-      usePlayerStore.getState().damageMentalHealth(drain);
+      stressDrainPerSec = checkoutStressDrain(slotsFromFront, priceCheckOnPlayerLane);
+      stressReason = checkoutStressReason(slotsFromFront, priceCheckOnPlayerLane);
+      usePlayerStore.getState().damageMentalHealth(stressDrainPerSec * dt);
+      if (usePlayerStore.getState().mentalHealth <= 0) {
+        useGameStore.getState().triggerNervousBreakdown();
+        useUIStore.setState({
+          lastCollisionMessage: 'Nervous breakdown at checkout. Membership emotionally revoked.',
+        });
+      }
+    } else if (myLane && !myLane.isOpen) {
+      stressDrainPerSec = 3.5;
+      stressReason = 'Your lane is CLOSED';
+      usePlayerStore.getState().damageMentalHealth(stressDrainPerSec * dt);
       if (usePlayerStore.getState().mentalHealth <= 0) {
         useGameStore.getState().triggerNervousBreakdown();
       }
@@ -238,10 +428,17 @@ export const useCheckoutStore = create<CheckoutStore>((set, get) => ({
       serveRemaining,
       switchCooldown: Math.max(0, switchCooldown - dt),
       lastEvent,
+      stressDrainPerSec,
+      stressReason,
+      priceCheckOnPlayerLane,
+      laneEventCooldown,
+      rushCooldown,
+      laneSwitchCount,
     });
   },
 
-  reset: () =>
+  reset: () => {
+    prevPriceCheckRemaining.clear();
     set({
       lanes: [],
       playerLaneId: null,
@@ -250,5 +447,12 @@ export const useCheckoutStore = create<CheckoutStore>((set, get) => ({
       serveRemaining: 0,
       switchCooldown: 0,
       lastEvent: null,
-    }),
+      stressDrainPerSec: 0,
+      stressReason: null,
+      priceCheckOnPlayerLane: false,
+      laneEventCooldown: 24,
+      rushCooldown: 18,
+      laneSwitchCount: 0,
+    });
+  },
 }));

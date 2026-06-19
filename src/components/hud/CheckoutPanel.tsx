@@ -11,6 +11,9 @@ export function CheckoutPanel() {
   const beingServed = useCheckoutStore((s) => s.beingServed);
   const switchCooldown = useCheckoutStore((s) => s.switchCooldown);
   const lastEvent = useCheckoutStore((s) => s.lastEvent);
+  const stressDrainPerSec = useCheckoutStore((s) => s.stressDrainPerSec);
+  const stressReason = useCheckoutStore((s) => s.stressReason);
+  const priceCheckOnPlayerLane = useCheckoutStore((s) => s.priceCheckOnPlayerLane);
 
   if (!shoppingListComplete && phase !== 'CHECKOUT') return null;
 
@@ -31,6 +34,12 @@ export function CheckoutPanel() {
                 ? 'at register — waiting for cashier'
                 : `${slotsFromFront} carts ahead`}
           </p>
+          {phase === 'CHECKOUT' && stressDrainPerSec > 0 && (
+            <p className={`checkout-stress ${priceCheckOnPlayerLane ? 'checkout-stress-alarm' : ''}`}>
+              MH drain: −{stressDrainPerSec.toFixed(1)}/s
+              {stressReason ? ` · ${stressReason}` : ''}
+            </p>
+          )}
           <div className="lane-grid">
             {lanes.map((lane) => {
               const registerBusy = lane.processingRemaining > 0 || lane.priceCheckRemaining > 0;

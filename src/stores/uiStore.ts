@@ -9,6 +9,7 @@ interface UIStore {
   damagePulse: number;
   triggerBumpFeedback: (damage: number) => void;
   triggerSampleFeedback: (message: string) => void;
+  triggerCheckoutStress: (message: string, flash?: number) => void;
   clearCollisionMessage: () => void;
   toggleSidebar: () => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
@@ -53,6 +54,18 @@ export const useUIStore = create<UIStore>((set) => ({
       visionBlur: 0,
     });
     window.setTimeout(() => set({ healFlash: 0 }), 600);
+  },
+
+  triggerCheckoutStress: (message, flash = 0.75) => {
+    set({
+      lastCollisionMessage: message,
+      bumpFlash: flash,
+      damagePulse: Date.now(),
+      visionBlur: 2.5,
+    });
+    window.setTimeout(() => {
+      set({ visionBlur: 0, bumpFlash: 0 });
+    }, 520);
   },
 
   clearCollisionMessage: () => set({ lastCollisionMessage: null }),

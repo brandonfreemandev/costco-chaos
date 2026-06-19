@@ -17,6 +17,7 @@ interface GameStore {
   secureParkingSpot: () => void;
   markShoppingComplete: () => void;
   beginCheckout: () => void;
+  skipToCheckout: () => void;
   reset: () => void;
 }
 
@@ -76,6 +77,23 @@ export const useGameStore = create<GameStore>((set, get) => ({
     useCheckoutStore.getState().initLanes();
     set({ phase: 'CHECKOUT' });
     usePlayerStore.getState().setZone('CHECKOUT');
+  },
+
+  skipToCheckout: () => {
+    if (get().phase !== 'SHOPPING' || get().checkoutWon) return;
+
+    const player = usePlayerStore.getState();
+    for (const item of player.inventory.items) {
+      if (!item.collected) {
+        player.collectItem(item.id);
+      }
+    }
+
+    useCheckoutStore.getState().reset();
+    set({ shoppingListComplete: true, checkoutWon: false, phase: 'CHECKOUT' });
+    useCheckoutStore.getState().initLanesForDevSkip();
+    usePlayerStore.getState().setZone('CHECKOUT');
+    logTransition('Dev shortcut — skipped shopping to checkout (test queue)');
   },
 
   reset: () => {

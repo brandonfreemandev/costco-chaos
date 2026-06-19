@@ -118,10 +118,6 @@ export function CostcoBuilding() {
         args={[wallThickness, wallHeight, depth]}
       />
 
-      <mesh position={[0, height - 0.2, frontZ + 1.8]} rotation={[-Math.PI / 4, 0, 0]}>
-        <boxGeometry args={[entranceWidth + 1, 0.08, 2.5]} />
-        <meshStandardMaterial color="#fff8e8" emissive="#ffe8c0" emissiveIntensity={0.45} roughness={0.35} />
-      </mesh>
       <pointLight position={[0, height - 1.5, frontZ + 2]} intensity={0.8} color="#fff5e6" distance={14} decay={2} />
     </group>
   );

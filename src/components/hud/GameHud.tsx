@@ -21,6 +21,8 @@ export function GameHud() {
   const slotsFromFront = useCheckoutStore((s) => s.slotsFromFront);
   const beingServed = useCheckoutStore((s) => s.beingServed);
   const lastEvent = useCheckoutStore((s) => s.lastEvent);
+  const priceCheckOnPlayerLane = useCheckoutStore((s) => s.priceCheckOnPlayerLane);
+  const stressDrainPerSec = useCheckoutStore((s) => s.stressDrainPerSec);
 
   const inCheckoutApproach = isInCheckoutApproach(position.x, position.z);
 
@@ -55,10 +57,13 @@ export function GameHud() {
       )}
 
       {phase === 'CHECKOUT' && !checkoutWon && (
-        <div className="toast-banner toast-checkout">
+        <div className={`toast-banner toast-checkout ${priceCheckOnPlayerLane ? 'toast-checkout-alarm' : ''}`}>
+          {priceCheckOnPlayerLane && !beingServed && (
+            <strong>PRICE CHECK — </strong>
+          )}
           {beingServed
             ? 'Scanning items… almost free…'
-            : `Lane queue — ${slotsFromFront} cart${slotsFromFront !== 1 ? 's' : ''} ahead. Press 1–6 to switch lanes.`}
+            : `Lane queue — ${slotsFromFront} cart${slotsFromFront !== 1 ? 's' : ''} ahead · −${stressDrainPerSec.toFixed(1)} MH/s`}
           {lastEvent ? ` · ${lastEvent}` : ''}
         </div>
       )}
