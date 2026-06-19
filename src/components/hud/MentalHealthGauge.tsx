@@ -1,4 +1,5 @@
 import { usePlayerStore } from '../../stores/playerStore';
+import { useUIStore } from '../../stores/uiStore';
 
 function healthColor(value: number): string {
   if (value > 60) return '#22c55e';
@@ -8,6 +9,9 @@ function healthColor(value: number): string {
 
 export function MentalHealthGauge() {
   const mentalHealth = usePlayerStore((s) => s.mentalHealth);
+  const bumpFlash = useUIStore((s) => s.bumpFlash);
+  const healFlash = useUIStore((s) => s.healFlash);
+  const damagePulse = useUIStore((s) => s.damagePulse);
 
   return (
     <section className="sidebar-section mental-health-section">
@@ -15,14 +19,19 @@ export function MentalHealthGauge() {
       <div className="mental-health-row">
         <div className="mental-health-track">
           <div
-            className="mental-health-fill"
+            className={`mental-health-fill ${healFlash > 0 ? 'mh-heal' : ''}`}
             style={{
               width: `${mentalHealth}%`,
               backgroundColor: healthColor(mentalHealth),
             }}
           />
         </div>
-        <span className="mental-health-value">{mentalHealth.toFixed(0)}%</span>
+        <span
+          className={`mental-health-value ${bumpFlash > 0 ? 'mh-hit' : ''} ${healFlash > 0 ? 'mh-heal-text' : ''}`}
+          key={damagePulse}
+        >
+          {mentalHealth.toFixed(0)}%
+        </span>
       </div>
     </section>
   );

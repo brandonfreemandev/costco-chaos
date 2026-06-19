@@ -1,4 +1,10 @@
-/** Costco-style lot layout (scaled ~1 unit = 1 meter). */
+/**
+ * Costco-style lot (1 unit ≈ 1 m).
+ *
+ * Rows run EAST–WEST (parallel to the building). Each row has many stalls
+ * side-by-side along X at a fixed Z — NOT the same X repeated at many Z values
+ * (which reads as bumper-to-bumper when you look down the main drive).
+ */
 
 export const LOT = {
   minX: -32,
@@ -13,34 +19,27 @@ export const BUILDING = {
   width: 54,
   height: 13,
   depth: 20,
-  /** Front facade faces +Z (player approaches from +Z). */
   frontZ: -34,
   centerY: 6.5,
   centerZ: -44,
   entranceWidth: 7,
 } as const;
 
-export const CROSSWALK = {
-  z: -27,
-  width: 10,
-  depth: 2.4,
+export const CROSSWALK = { z: -27, width: 10, depth: 2.4 } as const;
+export const SIDEWALK = { z: -23, width: 14, depth: 3 } as const;
+
+/** North–south fire lane / main drive. */
+export const MAIN_DRIVE = { minX: -5, maxX: 5 } as const;
+
+export const STALL = {
+  width: 2.75,
+  depth: 5.5,
+  pitchX: 5.75,
+  rowGap: 7,
 } as const;
 
-export const SIDEWALK = {
-  z: -23,
-  width: 14,
-  depth: 3,
-} as const;
-
-export const MAIN_DRIVE = {
-  minX: -4.5,
-  maxX: 4.5,
-} as const;
-
-/** Start in the main drive, south of the crosswalk gauntlet (crosswalk z ≈ -27). */
 export const PLAYER_SPAWN = { x: 0, z: 18, yaw: 0 } as const;
 
-/** Abandoned carts and corral clutter on the approach to the entrance. */
 export const APPROACH_CART_OBSTACLES = [
   { x: -2.4, z: 2 },
   { x: 2.6, z: -1 },
@@ -49,15 +48,21 @@ export const APPROACH_CART_OBSTACLES = [
   { x: -2.8, z: -15 },
 ] as const;
 
-export const WAREHOUSE_INTERIOR_SPAWN = { x: 0, z: 16, yaw: 0 } as const;
+export const WAREHOUSE_INTERIOR_SPAWN = { x: -7.5, z: 10, yaw: Math.PI };
 
-/** Door threshold — crossing this enters the warehouse. */
 export const ENTRANCE_ZONE = {
-  minX: -3.2,
-  maxX: 3.2,
-  minZ: -36.5,
-  maxZ: -33.5,
-  maxSpeed: 2.8,
+  minX: -BUILDING.entranceWidth / 2 - 0.4,
+  maxX: BUILDING.entranceWidth / 2 + 0.4,
+  minZ: BUILDING.frontZ - 0.8,
+  maxZ: BUILDING.frontZ + 2.2,
+  maxSpeed: 3.5,
+} as const;
+
+export const ENTRANCE_MARKER = {
+  x: 0,
+  z: BUILDING.frontZ + 1.1,
+  width: BUILDING.entranceWidth,
+  depth: 2.4,
 } as const;
 
 export const CAR_COLORS = [
@@ -69,7 +74,55 @@ export const CAR_COLORS = [
   '#8b1a1a',
   '#d8d4cc',
   '#1e3d2a',
+  '#3d5a80',
+  '#7c2d12',
+  '#f5f5f5',
+  '#8899aa',
 ] as const;
+
+/** Five stalls per side — each band uses a slightly different X set so columns don't stack in Z. */
+export interface RowPairModule {
+  id: string;
+  zNorth: number;
+  zSouth: number;
+  xSlots: readonly number[];
+}
+
+/** Only three Z bands — staggered X so one X position doesn't repeat at six Z depths. */
+export const ROW_PAIR_MODULES: RowPairModule[] = [
+  { id: 'w-front', zNorth: -4, zSouth: 3, xSlots: [-29, -24, -19, -14, -9.5] },
+  { id: 'w-mid', zNorth: 10, zSouth: 17, xSlots: [-28, -22.5, -17, -11.5, -8.5] },
+  { id: 'w-back', zNorth: 26, zSouth: 33, xSlots: [-30, -25, -20, -15, -10.5] },
+  { id: 'e-front', zNorth: -4, zSouth: 3, xSlots: [9.5, 14, 19, 24, 29] },
+  { id: 'e-mid', zNorth: 10, zSouth: 17, xSlots: [8.5, 11.5, 17, 22.5, 28] },
+  { id: 'e-back', zNorth: 26, zSouth: 33, xSlots: [10.5, 15, 20, 25, 30] },
+];
+
+/** Wide E–W traffic lanes between row-pair bands. */
+export const EW_DRIVE_Z = [6.5, 21.5] as const;
+
+export interface CartCorralSpec {
+  id: string;
+  x: number;
+  z: number;
+  rotation: number;
+  cartCount: number;
+}
+
+export const CART_CORRALS: CartCorralSpec[] = [
+  { id: 'corral-entrance-l', x: -9, z: -21.5, rotation: 0, cartCount: 5 },
+  { id: 'corral-entrance-r', x: 9, z: -21.5, rotation: 0, cartCount: 4 },
+  { id: 'corral-south-l', x: -22, z: 32, rotation: Math.PI / 2, cartCount: 6 },
+  { id: 'corral-south-r', x: 22, z: 30, rotation: -Math.PI / 2, cartCount: 5 },
+];
+
+export interface ParkingStallSpec {
+  id: string;
+  x: number;
+  z: number;
+  rotation: number;
+  moduleId: string;
+}
 
 export interface ParkedCarSpec {
   id: string;
@@ -77,43 +130,109 @@ export interface ParkedCarSpec {
   z: number;
   rotation: number;
   color: string;
+  stallId: string;
 }
 
-/** Perpendicular rows flanking the main drive aisle; gaps for player routing. */
+export interface CrossAisleSpec {
+  z: number;
+  x0: number;
+  x1: number;
+}
+
+export interface EwDriveSpec {
+  z: number;
+  x0: number;
+  x1: number;
+}
+
+const ROT_NORTH_ROW = 0;
+const ROT_SOUTH_ROW = Math.PI;
+
+function hash01(seed: string): number {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) | 0;
+  return (Math.abs(h) % 1000) / 1000;
+}
+
+function stallBlocked(x: number, z: number): boolean {
+  if (z > 35 || z < -8) return true;
+  if (x > MAIN_DRIVE.minX && x < MAIN_DRIVE.maxX && z > -14) return true;
+  if (Math.abs(x) < 6 && z > -10 && z < 8) return true;
+  for (const corral of CART_CORRALS) {
+    if (Math.hypot(x - corral.x, z - corral.z) < 4.5) return true;
+  }
+  return false;
+}
+
+function stallsForModule(mod: RowPairModule): ParkingStallSpec[] {
+  const stalls: ParkingStallSpec[] = [];
+
+  for (const x of mod.xSlots) {
+    for (const [z, rotation, band] of [
+      [mod.zNorth, ROT_NORTH_ROW, 'n'],
+      [mod.zSouth, ROT_SOUTH_ROW, 's'],
+    ] as const) {
+      if (stallBlocked(x, z)) continue;
+      stalls.push({
+        id: `${mod.id}-${band}-${x}`,
+        x,
+        z,
+        rotation,
+        moduleId: mod.id,
+      });
+    }
+  }
+
+  return stalls;
+}
+
+export function generateParkingStalls(): ParkingStallSpec[] {
+  return ROW_PAIR_MODULES.flatMap(stallsForModule);
+}
+
+export function getCrossAisles(): CrossAisleSpec[] {
+  return ROW_PAIR_MODULES.map((mod) => ({
+    z: (mod.zNorth + mod.zSouth) / 2,
+    x0: mod.xSlots[0] - 3.5,
+    x1: mod.xSlots[mod.xSlots.length - 1] + 3.5,
+  }));
+}
+
+export function getEwDriveAisles(): EwDriveSpec[] {
+  return [
+    { z: EW_DRIVE_Z[0], x0: LOT.minX + 2, x1: LOT.maxX - 2 },
+    { z: EW_DRIVE_Z[1], x0: LOT.minX + 2, x1: LOT.maxX - 2 },
+  ];
+}
+
 export function generateParkedCars(): ParkedCarSpec[] {
+  const stalls = generateParkingStalls();
   const cars: ParkedCarSpec[] = [];
-  let id = 0;
+  let carId = 0;
 
-  const addIfClear = (x: number, z: number, rotation: number, color: string) => {
-    if (z > 35 || z < -8) return;
-    if (x > MAIN_DRIVE.minX && x < MAIN_DRIVE.maxX && z > -18) return;
-    if (Math.abs(x) < 5 && z > -14 && z < 6) return;
-    cars.push({ id: `car-${id++}`, x, z, rotation, color });
-  };
+  for (const stall of stalls) {
+    if (hash01(stall.id) > 0.72) continue;
 
-  const leftRows = [-24, -17.5, -11];
-  const rightRows = [11, 17.5, 24];
+    const jitterX = (hash01(`${stall.id}-x`) - 0.5) * 0.1;
+    const jitterZ = (hash01(`${stall.id}-z`) - 0.5) * 0.12;
+    const yawJitter = (hash01(`${stall.id}-yaw`) - 0.5) * 0.05;
 
-  for (const x of leftRows) {
-    for (let i = 0; i < 6; i++) {
-      const z = 4 + i * 5.8;
-      addIfClear(x, z, 0, CAR_COLORS[(id + i) % CAR_COLORS.length]);
-    }
-  }
-
-  for (const x of rightRows) {
-    for (let i = 0; i < 6; i++) {
-      const z = 4 + i * 5.8;
-      addIfClear(x, z, 0, CAR_COLORS[(id + i + 2) % CAR_COLORS.length]);
-    }
-  }
-
-  for (const x of [-24, -17.5, 11, 17.5]) {
-    for (let i = 0; i < 4; i++) {
-      const z = -2 - i * 5.8;
-      addIfClear(x, z, Math.PI, CAR_COLORS[(id + i + 4) % CAR_COLORS.length]);
-    }
+    cars.push({
+      id: `car-${carId++}`,
+      stallId: stall.id,
+      x: stall.x + jitterX,
+      z: stall.z + jitterZ,
+      rotation: stall.rotation + yawJitter,
+      color: CAR_COLORS[Math.floor(hash01(`${stall.id}-c`) * CAR_COLORS.length)],
+    });
   }
 
   return cars;
+}
+
+export function getDriveLaneMarkings(): { x: number; z0: number; z1: number }[] {
+  return [
+    { x: MAIN_DRIVE.minX, z0: LOT.minZ + 4, z1: LOT.maxZ - 4 },
+    { x: MAIN_DRIVE.maxX, z0: LOT.minZ + 4, z1: LOT.maxZ - 4 },
+  ];
 }

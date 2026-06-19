@@ -19,11 +19,15 @@ export function handleNpcCollision(
   const rawForce = Math.max(Math.abs(playerSpeed - entitySpeed), combined * 0.4) * cartLoad;
   const impactForce = Math.max(0.5, rawForce);
 
-  const damage = mapRange(impactForce, MIN_IMPACT, MAX_IMPACT, 3, 16);
+  const scaled = mapRange(impactForce, MIN_IMPACT, MAX_IMPACT, 6, 18);
+  const damage = Math.max(6, scaled);
 
   usePlayerStore.getState().damageMentalHealth(damage);
-  spatialAudio.playCartSlam(impactForce);
-  useUIStore.getState().triggerVisionBlur(damage);
+  useUIStore.getState().triggerBumpFeedback(damage);
+
+  if (useGameStore.getState().audioUnlocked) {
+    spatialAudio.playCartSlam(impactForce);
+  }
 
   if (usePlayerStore.getState().mentalHealth <= 0) {
     useGameStore.getState().triggerNervousBreakdown();
@@ -38,9 +42,7 @@ export function tryHandlePlayerNpcCollision(
   const meta = getNpcMeta(otherHandle);
   if (!meta?.isNpc) return false;
 
-  const entitySpeed = otherLinvel
-    ? Math.hypot(otherLinvel.x, otherLinvel.z)
-    : 0;
+  const entitySpeed = otherLinvel ? Math.hypot(otherLinvel.x, otherLinvel.z) : 0;
   handleNpcCollision(playerSpeed, entitySpeed, meta.cartLoad);
   return true;
 }
@@ -50,7 +52,7 @@ export function tryNpcProximityBump(
   playerSpeed: number,
   entitySpeed: number,
   cartLoad: number,
-  cooldownMs = 420,
+  cooldownMs = 320,
 ): boolean {
   const now = performance.now();
   const last = proximityCooldowns.get(npcId) ?? 0;
@@ -58,4 +60,8 @@ export function tryNpcProximityBump(
   proximityCooldowns.set(npcId, now);
   handleNpcCollision(playerSpeed, entitySpeed, cartLoad);
   return true;
+}
+
+export function resetNpcBumpCooldowns(): void {
+  proximityCooldowns.clear();
 }

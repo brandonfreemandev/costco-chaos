@@ -4,9 +4,62 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Costco Chaos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&display=swap" rel="stylesheet" />
+    <style>
+      #boot-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 99999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: radial-gradient(ellipse at 50% 30%, #003d73 0%, #0f172a 55%, #020617 100%);
+        font-family: 'DM Sans', system-ui, sans-serif;
+        color: #e2e8f0;
+      }
+      #boot-splash .boot-inner { text-align: center; max-width: 360px; padding: 24px; }
+      #boot-splash .boot-logo {
+        width: 56px; height: 56px; margin: 0 auto 16px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #005daa, #e31837);
+        display: flex; align-items: center; justify-content: center;
+        font-weight: 800; font-size: 20px; color: #fff;
+        animation: boot-pulse 1.4s ease-in-out infinite;
+      }
+      #boot-splash h1 { margin: 0 0 8px; font-size: 22px; font-weight: 800; }
+      #boot-splash p { margin: 0; font-size: 13px; color: #94a3b8; line-height: 1.5; }
+      #boot-splash .boot-bar {
+        margin: 20px auto 0; width: 220px; height: 6px;
+        background: #1e293b; border-radius: 99px; overflow: hidden;
+      }
+      #boot-splash .boot-bar-fill {
+        height: 100%; width: 30%;
+        background: linear-gradient(90deg, #005daa, #e31837);
+        border-radius: 99px;
+        animation: boot-load 2s ease-in-out infinite;
+      }
+      @keyframes boot-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+      @keyframes boot-load { 0% { width: 12%; } 50% { width: 70%; } 100% { width: 12%; } }
+    </style>
   </head>
   <body>
+    <div id="boot-splash" aria-live="polite" aria-busy="true">
+      <div class="boot-inner">
+        <div class="boot-logo">CC</div>
+        <h1>Costco Chaos</h1>
+        <p>Locating your cart… and your will to live.</p>
+        <div class="boot-bar"><div class="boot-bar-fill"></div></div>
+      </div>
+    </div>
     <div id="root"></div>
+    <script>
+      window.__hideBootSplash = function () {
+        var el = document.getElementById('boot-splash');
+        if (el) el.remove();
+      };
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useGameStore } from '../../stores/gameStore';
 import { useCartTransformStore } from '../../stores/cartTransformStore';
-import { CROSSWALK, ENTRANCE_ZONE } from './parkingLotLayout';
+import { ENTRANCE_ZONE } from './parkingLotLayout';
 
 export function EntranceSensor() {
   const enterWarehouse = useGameStore((s) => s.secureParkingSpot);
@@ -15,15 +15,14 @@ export function EntranceSensor() {
       const position = useCartTransformStore.getState().position;
       const speed = useCartTransformStore.getState().speed;
 
-      const crossedCrosswalk = position.z <= CROSSWALK.z + 1.5;
-      const inEntrance =
+      const atFrontDoors =
         position.x >= ENTRANCE_ZONE.minX &&
         position.x <= ENTRANCE_ZONE.maxX &&
         position.z >= ENTRANCE_ZONE.minZ &&
         position.z <= ENTRANCE_ZONE.maxZ &&
         speed <= ENTRANCE_ZONE.maxSpeed;
 
-      if (crossedCrosswalk && inEntrance) {
+      if (atFrontDoors) {
         enterWarehouse();
       }
     }, 200);

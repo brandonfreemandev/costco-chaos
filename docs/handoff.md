@@ -1,275 +1,277 @@
-# AI Agent Handoff & Context: Costco Chaos
+# Costco Chaos — Handoff (Transition to Next Tool)
 
-> **Last updated:** 2026-06-18  
-> **Repo:** `https://github.com/brandonfreemandev/costco-chaos.git` (branch `main`)  
-> **Local path:** `/Users/brandonfreeman/Desktop/costco-chaos`  
-> **Package name:** `costco-chaos` (the old name `costcore` is fully retired — do not reintroduce it)
+> **Updated:** 2026-06-18  
+> **Repo:** `https://github.com/brandonfreemandev/costco-chaos.git`  
+> **Local:** `/Users/brandonfreeman/Desktop/costco-chaos`  
+> **Active branch:** `cursor/customer-mh-proximity-collision` (large **uncommitted** delta — see §8)  
+> **Name:** `costco-chaos` only — **`costcore` is dead**
 
 ---
 
-## 1. What This Game Is
+## For the next agent / tool (read this first)
 
-**Costco Chaos** is a web-based 3D stress-sim parody of shopping at Costco. The player is a **customer with a shopping cart**, not an employee. Stress comes from pushing a heavy cart through dense, chaotic crowds and completing a shopping list before **Mental Health** hits zero.
+**Owner preference:** Play the game. Fix what you see. Don’t write long explanations — ship runnable changes.
 
-**Stack:** Vite + React 19 + TypeScript + React Three Fiber + Rapier (`@react-three/rapier`) + Zustand + Web Audio API.
+**Goal:** Make it **funny**, **modern-feeling**, and **complete as a loop** — not a gray box maze with a sidebar. Aim for **1–2 iterations per feature**, not five rounds of “fixed (maybe)”.
 
-**Run locally:**
+**Top 3 user-visible gaps (still missing after many Cursor sessions):**
+
+1. **Sample stations** — MH restore + NPC swarm (`mechanics.pseudocode` §2). Archetype `SAMPLE_HUNTER` exists; **zero kiosk geometry, zero restore logic, zero swarm**.
+2. **Humor / tone** — Reads like a tech demo. No satirical copy, no absurd Costco parody moments, no audio stingers beyond cart squeak/slam.
+3. **Visual polish** — “Feels like the 90s.” Procedural boxes + wallpaper shelves + capsule NPCs. User wants browser-shooter-level juice (feedback, lighting, personality) without slideshow FPS.
+
+**Do not regress:**
+
+- Customer + cart (not employee)
+- **Mental Health** (never “compliance” / “integrity”)
+- Solid rack/wall collision (manual AABB in `staticObstacles.ts` — kinematic cart bypasses Rapier for statics)
+- `I` key skips parking → warehouse (`useGameShortcuts.ts`)
+
+---
+
+## 30-second playtest script
+
 ```bash
 cd /Users/brandonfreeman/Desktop/costco-chaos
 npm install   # if needed
-npm run dev
-npm run build # verify types + production bundle
+npm run dev   # http://localhost:5173 — hard refresh Cmd+Shift+R if stale
+npm run build # must pass before handoff
 ```
 
----
-
-## 2. Product Directives (Read Before Coding)
-
-These reflect **confirmed user intent** — they override older planning docs where they conflict.
-
-| Topic | Directive |
-|---|---|
-| **Player identity** | Customer shopping with a cart. Never frame as employee, shift, portal, HR, compliance, telemetry, etc. |
-| **Mental Health** | Always call it **Mental Health** (0–100). Never "Compliance Index", "System Integrity", or similar. |
-| **Cart availability** | Cart is available in **both** parking lot (`PARKING`) and warehouse (`SHOPPING`). There is no on-foot pedestrian mode anymore (`PedestrianController` was removed). |
-| **UI aesthetic** | **Clean modern collapsible sidebar** (`GameSidebar.tsx`, `App.css`). The 2010s corporate intranet direction in `aesthetic_guidelines.md` is **stale** — do not revert to MS Access-style UI unless the user explicitly asks. |
-| **Camera** | First-person from behind the cart handle (`FirstPersonCartCamera.tsx`). Cart handle visible whenever the player has a cart (parking + warehouse). |
-| **Controls** | WASD / arrow keys via `useCartInput.ts`. Steering was fixed by negating steer input in cart physics (`ShoppingCart.tsx`). |
-| **Naming** | Project is **costco-chaos** everywhere (folder, package, GitHub remote, chat title). |
-
----
-
-## 3. Game Flow (As Built)
-
-```
-MENU → PARKING (cart, parking lot) → SHOPPING (cart, warehouse) → CHECKOUT / END
-```
-
-| Phase | What happens |
-|---|---|
-| `MENU` | `EnterGate.tsx` — "Start Shopping" unlocks audio and starts game |
-| `PARKING` | Push cart through parking lot chaos toward building entrance |
-| `SHOPPING` | Collect 4 glowing shelf items inside T-shaped warehouse aisles |
-| `CHECKOUT` | Phase exists in types but **not implemented** |
-| `END` | Nervous breakdown game-over overlay when Mental Health = 0 |
-
-**Entering the warehouse:** `EntranceSensor.tsx` polls every 200ms. Requires crossing the crosswalk (`z <= CROSSWALK.z + 1.5`) AND being inside `ENTRANCE_ZONE` at low speed. Calls `gameStore.secureParkingSpot()` → transitions to `SHOPPING` and teleports cart to `WAREHOUSE_INTERIOR_SPAWN`.
-
----
-
-## 4. Architecture Map (Implemented)
-
-### State (Zustand)
-
-| Store | File | Purpose |
+| Step | Action | Pass? |
 |---|---|---|
-| `gameStore` | `src/stores/gameStore.ts` | Phase machine, audio unlock, nervous breakdown, warehouse entry |
-| `playerStore` | `src/stores/playerStore.ts` | Mental health, shopping list, cart physics, zone, item collection |
-| `uiStore` | `src/stores/uiStore.ts` | Vision blur on hit, collision toast, sidebar collapse |
-| `cartTransformStore` | `src/stores/cartTransformStore.ts` | Player position/yaw/speed — shared by camera, entrance sensor, NPC culling, proximity collision |
+| 1 | Start → parking lot | Cart moves WASD |
+| 2 | Bump a shopper | Red flash, toast, **MH drops ~6+**, sidebar alert |
+| 3 | Press **I** | Teleport to warehouse aisle |
+| 4 | Roll through **gold floor ring** | Item ticks off list, ding |
+| 5 | Hit racks | **Stop** — don’t clip through |
+| 6 | Sample station | **PASS** — green ring + [E] when live; NPCs swarm |
 
-### Core Systems
+Console: `[MH]` logs on damage. `[Shortcut] I` on skip.
 
-| System | File(s) | Notes |
+---
+
+## What this game is
+
+Web 3D Costco stress sim. Push cart → survive crowds → collect list → (checkout TBD) before Mental Health hits 0.
+
+**Stack:** Vite · React 19 · TS · R3F · Rapier · Zustand · Web Audio
+
+**Phases:** `MENU` → `PARKING` → `SHOPPING` → `CHECKOUT` (stub) → `END`
+
+---
+
+## Product rules (non-negotiable)
+
+| Rule | Detail |
+|---|---|
+| Player | Customer with cart — not employee |
+| Stress meter | **Mental Health** 0–100 |
+| Cart | Always in `PARKING` + `SHOPPING` |
+| Collision | Solid shelves/walls — no ghost mode |
+| UI | Modern collapsible sidebar — not legacy corporate intranet |
+| Humor | Satirical Costco parody — see `aesthetic_guidelines.md` intent; **under-delivered in code** |
+
+---
+
+## Architecture (as of this handoff)
+
+### Stores
+
+| Store | File |
+|---|---|
+| Phase / game over | `src/stores/gameStore.ts` |
+| MH, list, cart stats | `src/stores/playerStore.ts` |
+| Bump flash, blur, toasts | `src/stores/uiStore.ts` |
+| Player x/y/yaw/speed | `src/stores/cartTransformStore.ts` |
+
+### Movement & collision
+
+| Piece | File | Notes |
 |---|---|---|
-| Cart physics | `src/systems/physicsController.ts`, `ShoppingCart.tsx` | Momentum-based push; mass increases with inventory |
-| NPC collision → MH | `handleCollision.ts`, `npcRegistry.ts`, `PlayerNpcProximityCollision.tsx` | **Dual detection** — see §5 |
-| NPC crowds | `NPC.tsx`, `CulledNPC.tsx` | Waypoint walkers with chaos behavior; distance culling |
-| Spatial audio | `audio/spatialAudioManager.ts` | Cart squeak + impact sounds; requires audio unlock |
-| Layout constants | `parkingLotLayout.ts` | Spawn, crosswalk, entrance zone, parked cars, abandoned cart obstacles |
+| Cart drive | `ShoppingCart.tsx` | Kinematic; **manual** AABB slide |
+| Static obstacles | `systems/staticObstacles.ts` | Racks, walls, cars, NPC hulls |
+| NPC bumps → MH | `systems/npcBumps.ts` | **Primary** — separation-gap touch in cart `useFrame` |
+| Damage | `systems/handleCollision.ts` | Min ~6 MH per bump; cooldown per NPC |
+| NPC positions | `systems/npcRegistry.ts` | Updated every NPC frame (priority `-1`) |
 
-### Scene Components
+**Why not Rapier alone:** Cart uses `setTranslation` every frame → Rapier never blocks movement. Statics + NPC blocking are manual. Rapier `onCollisionEnter` is backup only.
+
+**Past bug (fixed):** Strict AABB overlap never fired when hulls stopped 0.05m apart. Now uses gap ≤ slack in `npcBumps.ts`.
+
+### Scenes
 
 | Component | Role |
 |---|---|
-| `GameScene.tsx` | Canvas + Physics wrapper; mounts parking OR warehouse |
-| `ParkingLot.tsx` | Ground, building, parked cars, crosswalk, gauntlet NPCs, abandoned cart obstacles |
-| `CostcoBuilding.tsx` | Store facade |
-| `WarehouseAisles.tsx` | T-aisles, shelf colliders, warehouse NPCs |
-| `ShelfProducts.tsx` | Glowing collectibles + decoy shelf clutter |
-| `ShoppingCart.tsx` | Player rigid body + cart physics (PARKING + SHOPPING) |
-| `FirstPersonCartCamera.tsx` | FP camera + visible cart handle |
-| `PlayerNpcProximityCollision.tsx` | Frame-based NPC bump detection (**primary collision path**) |
+| `GameScene.tsx` | Canvas, warehouse IBL (`WarehouseEnvironment`), parking `Environment` |
+| `ParkingLot.tsx` | Lot, building, gauntlet NPCs (~14), green door mat |
+| `WarehouseAisles.tsx` | Instanced racks, **shelf wallpaper**, fake ceiling lights, floor glow, aisle rings |
+| `WarehouseCeilingLights.tsx` | Emissive troffers — **no PointLights** |
+| `ShelfWallpaper.tsx` | Canvas texture on racks (no 3D products) |
+| `ShoppingCart.tsx` | Player + aisle pickup radius + `applyNpcBumps` |
+| `EntranceSensor.tsx` | Door zone only (no crosswalk requirement) |
+| `NpcCrowd.tsx` | Distance cull NPC mounts |
+| `NPC.tsx` | Box avatars, waypoint chaos |
 
 ### HUD
 
 | Component | Role |
 |---|---|
-| `GameSidebar.tsx` | Collapsible left sidebar — Mental Health, objective, shopping list, cart stats |
-| `MentalHealthGauge.tsx` | Mental Health bar (replaced old `ComplianceGauge.tsx`) |
-| `ShoppingListGrid.tsx` | 4-item quest list with SKU column |
-| `GameHud.tsx` | Viewport-level toasts/overlays |
-| `EnterGate.tsx` | Main menu / start screen |
+| `GameSidebar.tsx` | MH, list, stats, game over |
+| `MentalHealthGauge.tsx` | Bar — shakes on hit |
+| `BumpFlash.tsx` | Red vignette + center toast |
+| `GameHud.tsx` | Bottom objective banners |
+| `EnterGate.tsx` | Title screen |
+
+### Layout constants
+
+| File | Contents |
+|---|---|
+| `parkingLotLayout.ts` | `PLAYER_SPAWN {0,18}`, door `ENTRANCE_ZONE`, `WAREHOUSE_INTERIOR_SPAWN {-7.5,23}` |
+| `warehouseLayout.ts` | 6 aisles, rack spines, maze blocks, cross-aisles |
 
 ---
 
-## 5. Critical Implementation Detail: NPC Collisions
+## Shopping list (current)
 
-**Problem that was fixed:** Rapier `onCollisionEnter` on the player cart was **unreliable** against `kinematicVelocity` NPC bodies. Bumps often did not register and Mental Health did not drop.
+4 items in `playerStore.ts`. **No 3D products** — collect by rolling through **gold rings** on floor (`WarehouseAisles` `AisleMarkers`, pickup in `ShoppingCart`).
 
-**Solution (keep both layers):**
+| Item | worldPosition (x, z) |
+|---|---|
+| Chicken Breast | -11, -23 |
+| Muffins | -6.5, 8 |
+| TV bundle | 6.5, -5 |
+| Bath tissue | 11.5, -19 |
 
-1. **Primary — proximity detection** (`PlayerNpcProximityCollision.tsx`): Every frame, compares player position (from `cartTransformStore`) against all NPC runtime positions (from `npcRegistry.ts`). Within `BUMP_RADIUS` (1.25m), calls `tryNpcProximityBump()` with per-NPC cooldown (~420ms).
-
-2. **Secondary — Rapier events** (`ShoppingCart.tsx` `onCollisionEnter`): Still calls `tryHandlePlayerNpcCollision()` as a backup.
-
-**NPC registry** (`npcRegistry.ts`):
-- `registerNpc(handle, meta)` — on NPC spawn
-- `updateNpcRuntime(handle, meta, x, z, speed)` — updated every frame in `NPC.tsx`
-- `getActiveNpcRuntimes()` — used by proximity collision
-
-**Damage formula** (`handleCollision.ts`):
-- Impact from relative + combined speed × `cartLoad`
-- Maps to 3–16 MH damage
-- Triggers vision blur, cart slam audio, game over at 0
-
-**When tuning collisions:** Adjust `BUMP_RADIUS`, cooldown in `tryNpcProximityBump`, or damage range in `handleNpcCollision` — not just Rapier collision groups.
+**Win flow:** All collected → **nothing happens** (no checkout trigger).
 
 ---
 
-## 6. Parking Lot & NPC Behavior (Recent Changes)
+## Request tracker (user asks vs shipped)
 
-### Spawn & approach
-- **Player spawn:** `{ x: 0, z: -8 }` — near crosswalk, short approach to entrance
-- **Abandoned cart obstacles:** `APPROACH_CART_OBSTACLES` in `parkingLotLayout.ts` — static colliders on main drive
-- **Crosswalk:** `z: -27` | **Entrance zone:** `z: -33.5 to -36.5`
-
-### Chaotic crowds (not military marches)
-`generateGauntletNPCs()` in `CulledNPC.tsx` produces:
-- Diagonal / zigzag waypoints (3+ points)
-- Random speeds, cart loads, archetypes
-- Per-NPC `chaos` value (0.35–0.95)
-
-`NPC.tsx` movement adds:
-- Random pauses (400–2600ms)
-- Speed jitter via sine waves
-- Lateral wobble perpendicular to path
-- Variable arrive threshold
-
-Gauntlet NPCs use `alwaysActiveInGauntlet={config.id.startsWith('gauntlet-')}` so they stay active in parking lot regardless of distance.
-
----
-
-## 7. Shopping List (Quest Items)
-
-Defined in `playerStore.ts` — 4 items with world positions on warehouse shelves:
-
-| Item | Position (approx) | Aisle |
+| Request | Status | Notes |
 |---|---|---|
-| Chicken Breast 12lb x4 | `(-2.6, 1.1, -18)` | Meat |
-| Muffin Assortment 24ct | `(2.6, 0.95, -10)` | Bakery |
-| 65" LED Display Bundle | `(-2.6, 1.5, 4)` | Electronics |
-| Bath Tissue 30-Roll Pallet | `(2.6, 1.35, 14)` | Bulk Paper |
-
-Collectibles glow and auto-pickup on proximity (`ShelfProducts.tsx`).
-
----
-
-## 8. Git History & Uncommitted Work
-
-### Committed (on `origin/main`)
-```
-ce44822 Add collapsible sidebar HUD, glowing collectibles, and culled NPC crowds.
-1a0ccd2 Add first-person Costco lot with collidable parking and warehouse entry.
-01ae898 Add web prototype scaffold and Parking Lot Gauntlet Phase 1.
-```
-
-### Uncommitted local changes (as of 2026-06-18)
-A large batch of work from the latest session is **not yet committed**, including:
-- Mental Health rebrand (`MentalHealthGauge`, removed `ComplianceGauge`)
-- Customer-facing copy (EnterGate, GameSidebar, uiStore, index.html)
-- Cart in parking lot (`ShoppingCart` PARKING phase, removed `PedestrianController`)
-- Proximity collision system (`PlayerNpcProximityCollision`, `npcRegistry` runtime tracking)
-- Chaotic NPC generation + movement
-- Closer spawn + abandoned cart obstacles
-- Renamed doc: `docs/costco-chaos-gemini-generated-starting-prompt.md`
-
-**First action for new agent:** Run `git status` and `git diff` to see full delta. User has not asked to commit yet — ask before committing.
+| Customer + Mental Health rebrand | ✅ | |
+| Solid shelf collision | ✅ | Manual AABB; took many iterations |
+| Performance in warehouse | ⚠️ | Better (no point lights, instancing) — user still wants more “wow” |
+| Warehouse maze / tall store | ⚠️ | Layout exists; visuals still primitive |
+| NPC chaos, fewer instances | ✅ | ~14 parking, ~5 warehouse, faster movement |
+| Skip parking (`I`) | ✅ | |
+| Entrance at front doors | ✅ | Green mat + door zone |
+| Shelf products → wallpaper | ✅ | |
+| MH drops on shopper bump | ✅ | Fixed via `npcBumps.ts` (verify in runtime) |
+| **Sample kiosks / MH restore** | ✅ | 3 kiosks, [E] when live, +18 MH, NPC swarm |
+| **Humor / satire in UI + world** | ⚠️ | Bump lines, enter gate, win/lose copy — more needed |
+| **Checkout phase** | ⚠️ | 12s queue drain → win overlay (prototype) |
+| **Feel modern / compelling** | ❌ | User: “still 90s” |
 
 ---
 
-## 9. Known Issues & Gaps
+## Sample stations — spec to implement (copy from `mechanics.pseudocode`)
 
-| Area | Status |
+**Minimum viable (one shot):**
+
+1. 2–3 kiosk props on cross-aisles (`CROSS_AISLES_Z` in `warehouseLayout.ts`).
+2. Player within ~2m + press **E** (or auto) → `restoreMentalHealth(15)` + funny toast.
+3. Spawn timer 45–90s; when active, nearby NPCs with high obsessiveness path toward kiosk (`TARGETING_SAMPLE`).
+4. Risk: swarm = more bumps while you linger.
+
+**Files to add:** `SampleKiosk.tsx`, `systems/sampleStations.ts`, hook input in `useCartInput.ts` or proximity in `ShoppingCart`.
+
+---
+
+## Humor — quick wins for next tool
+
+- Rename list items / SKUs to absurd Costco bulk (`"Emergency Cheese 48lb"`, SKU `000001`).
+- Bump toasts: rotate lines (`"Sample lady judged your cart"`, `"Cart karma"`, `"Executive member energy"`).
+- `EnterGate` / sidebar objective: deadpan corporate passive-aggressive copy.
+- Sample station: `"Free sample. Unlimited regret."`
+- Game over: `"Your membership has been emotionally cancelled."`
+- Optional: short `.mp3` or synthesized Web Audio stingers (ding, crowd gasp) — `spatialAudioManager.ts` already exists.
+
+---
+
+## Visual juice — without killing FPS
+
+Already in repo:
+
+- Fake lights: emissive troffers + floor glow + drei `Lightformer` IBL (`WarehouseEnvironment.tsx`)
+- ACES tone mapping in `GameScene.tsx`
+
+**Next steps (high impact / low cost):**
+
+- Cross-aisle **signs** (drei `Text` or canvas sprites) — “BAKERY”, “SAMPLES”
+- NPC shirt colors + **name tags** above heads (funny names)
+- Subtle camera punch on bump (offset in `FirstPersonCartCamera.tsx`)
+- Optional: `@react-three/postprocessing` bloom **emissive only** — test FPS first
+- **Do not** add 35 `PointLight`s again
+
+Reference patterns: baked lightmaps, instancing, IBL — see Codrops R3F perf articles; archviz forums recommend fake emissive + lightmaps over dynamic lights.
+
+---
+
+## Git state
+
+**Last commit:** `2e11c4d` — spawn + vite port  
+**Branch:** `cursor/customer-mh-proximity-collision`  
+**Uncommitted:** ~30+ files (warehouse rewrite, collision, lighting, bumps, wallpaper, shortcuts, deleted `PlayerNpcProximityCollision.tsx`)
+
+**Before pushing:** `git status`, `npm run build`, ask user before commit.
+
+**Deleted / renamed:** `ComplianceGauge`, `PedestrianController`, `ParkingSpotSensor`, `PlayerNpcProximityCollision`, `cartSlideMovement`, decoy product culling
+
+---
+
+## Docs map
+
+| Doc | Trust level |
 |---|---|
-| **Checkout phase** | Not implemented — types exist, no gameplay |
-| **Sample kiosks / MH restore** | Not implemented |
-| **Win condition** | Collect all items → nothing happens yet (no checkout trigger) |
-| **`ParkingSpotSensor.tsx`** | Deleted — entrance is now `EntranceSensor.tsx` (crosswalk + door zone, not a parking stall) |
-| **`secureParkingSpot` naming** | Misleading legacy name — actually means "entered warehouse". Consider renaming to `enterWarehouse` in a future cleanup. |
-| **`aesthetic_guidelines.md`** | Partially outdated (corporate UI section). Current UI is modern sidebar. |
-| **`architecture.md`** | Still describes "secure a parking spot" — should say "reach entrance" |
-| **Empty `costcore` folder** | May exist on Desktop as a Cursor/vite cache stub from pre-rename. Safe to delete if empty. |
+| **This file** | Source of truth for transition |
+| `mechanics.pseudocode` | Sample + checkout **design intent** — not implemented |
+| `architecture.md` | Partially stale |
+| `aesthetic_guidelines.md` | Tone target good; UI section describes current sidebar |
+| `costco-chaos-gemini-generated-starting-prompt.md` | Original vision — sample hunting, checkout boss |
+| `cheatsheet.md` | Port 5173 / kill stale vite |
 
 ---
 
-## 10. Immediate Next Steps (Suggested Priority)
+## Suggested priority for next tool (ordered)
 
-1. **Verify uncommitted changes** — `npm run build`, playtest bumps (MH should drop), playtest entrance transition, playtest item pickup.
-2. **Commit the session work** — if user approves; message should reflect customer framing, MH collisions, chaotic NPCs, costco-chaos rename.
-3. **Win flow** — when all 4 items collected, transition to `CHECKOUT` or show success state.
-4. **Checkout phase** — queue survival, continuous MH drain (see `mechanics.pseudocode`).
-5. **Sample kiosks** — optional MH restore with crowd swarm risk.
-6. **Doc cleanup** — align `architecture.md` and `aesthetic_guidelines.md` with current implementation.
-7. **Rename `secureParkingSpot`** → `enterWarehouse` (low priority refactor).
+1. **Playtest** — 30s script above.
+2. **More humor** — NPC name tags, rotating shelf labels, audio stingers.
+3. **Checkout depth** — visible queue, moving NPCs in line.
+4. **Visual punch** — selective bloom on emissive samples/troffers only.
+5. **Commit** — if user asks.
 
 ---
 
-## 11. Source of Truth Docs
+## Dev rules
 
-Read these before major changes:
+**DO:** Small diffs · playtest every change · keep MH bump logic in `npcBumps.ts` · log `[MH]` / `[GameManager]` · match Zustand/R3F patterns
 
-| Doc | Contents |
-|---|---|
-| `docs/architecture.md` | Planned loops and managers (partially stale — see §9) |
-| `docs/state.md` | Data structures and enums |
-| `docs/mechanics.pseudocode` | Collision, MH, checkout logic sketches |
-| `docs/aesthetic_guidelines.md` | Tone/visual targets (UI section stale — see §2) |
-| `docs/costco-chaos-gemini-generated-starting-prompt.md` | Original Gemini planning prompt |
+**DON'T:** Reintroduce `costcore` · employee/compliance framing · ghost collision · 35 point lights · long agent essays instead of shipping · commit without user ask
 
 ---
 
-## 12. Development Rules
+## Collision groups
 
-**DO:**
-- Keep changes small and focused
-- Log state transitions (pattern established in `gameStore.ts`, `playerStore.ts`)
-- Match existing conventions (Zustand stores, R3F components, Rapier interaction groups)
-- Preserve customer framing and "Mental Health" naming
-- Use `cartTransformStore` as the single source for player world position
-
-**DON'T:**
-- Reintroduce `costcore` naming
-- Revert to employee/portal/compliance language
-- Use standard FPS character controllers — cart momentum physics only
-- Rely solely on Rapier `onCollisionEnter` for NPC→player MH damage
-- Hardcode NPC lanes in perfect grids — crowds should feel chaotic
-- Commit or push without user asking
-
----
-
-## 13. Collision Groups Reference
-
-From `types/state.ts`:
 ```typescript
+// src/types/state.ts
 COLLISION_GROUP = { PLAYER: 0, NPC: 1, STATIC: 2 }
 ```
-Player collides with NPC + STATIC. NPCs collide with PLAYER + STATIC. Static (cars, shelves, abandoned carts) collides with PLAYER + NPC.
 
 ---
 
-## 14. Session Changelog (2026-06-18)
+## Controls
 
-Summary of what the previous agent accomplished in the last working session:
-
-1. **Shortened parking approach** — spawn moved from `z: 32` to `z: -8`; added `APPROACH_CART_OBSTACLES` static abandoned carts on main drive.
-2. **Fixed MH damage on NPC bumps** — added proximity-based collision system; improved damage formula for low-speed bumps.
-3. **Customer perspective** — removed employee copy; cart from start; deleted pedestrian-only mode.
-4. **Chaotic NPC traffic** — rewrote gauntlet generation and NPC movement (pauses, jitter, wobble, zigzag paths).
-5. **Renamed project to costco-chaos** — folder, package, doc filename, chat title; removed all `costcore` references.
-6. **Mental Health UI** — `ComplianceGauge` → `MentalHealthGauge`; updated sidebar, game over, collision toasts.
-7. **Build verified** — `npm run build` passes.
+| Key | Action |
+|---|---|
+| W / ↑ | Forward |
+| S / ↓ | Reverse |
+| A / D | Steer |
+| **E** | Take sample (when kiosk live + in green ring) |
+| **I** | Skip to warehouse (parking only) |
 
 ---
 
-*End of handoff. When in doubt, playtest with `npm run dev` and read the files listed in §4 before changing architecture.*
+*Handoff complete. Next owner: switch back to Cursor, run `npm run dev`, bump a shopper, confirm MH moves, then build sample kiosks.*

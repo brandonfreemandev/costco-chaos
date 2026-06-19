@@ -13,7 +13,9 @@ const inputState = {
   right: false,
 };
 
-const GAME_KEYS = new Set([
+let interactLatch = false;
+
+const MOVE_KEYS = new Set([
   'ArrowUp',
   'ArrowDown',
   'ArrowLeft',
@@ -23,6 +25,13 @@ const GAME_KEYS = new Set([
   'KeyS',
   'KeyD',
 ]);
+
+/** One-shot per press — sample stations, etc. */
+export function consumeInteract(): boolean {
+  if (!interactLatch) return false;
+  interactLatch = false;
+  return true;
+}
 
 export function getCartInput(): CartInput {
   let steer = 0;
@@ -39,7 +48,12 @@ export function getCartInput(): CartInput {
 export function useCartInput(): void {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (!GAME_KEYS.has(event.code)) return;
+      if (event.code === 'KeyE') {
+        interactLatch = true;
+        return;
+      }
+
+      if (!MOVE_KEYS.has(event.code)) return;
       event.preventDefault();
 
       switch (event.code) {
@@ -65,7 +79,7 @@ export function useCartInput(): void {
     };
 
     const onKeyUp = (event: KeyboardEvent) => {
-      if (!GAME_KEYS.has(event.code)) return;
+      if (!MOVE_KEYS.has(event.code)) return;
       event.preventDefault();
 
       switch (event.code) {
@@ -95,6 +109,7 @@ export function useCartInput(): void {
       inputState.backward = false;
       inputState.left = false;
       inputState.right = false;
+      interactLatch = false;
     };
 
     window.addEventListener('keydown', onKeyDown);

@@ -1,16 +1,22 @@
 import { create } from 'zustand';
 import type { GamePhase } from '../types/state';
+import { useCheckoutStore } from './checkoutStore';
 import { usePlayerStore } from './playerStore';
+import { useSampleStationStore } from './sampleStationStore';
 
 interface GameStore {
   phase: GamePhase;
   audioUnlocked: boolean;
   nervousBreakdown: boolean;
+  checkoutWon: boolean;
   parkingSpotSecured: boolean;
+  shoppingListComplete: boolean;
   setPhase: (phase: GamePhase) => void;
   unlockAudio: () => void;
   triggerNervousBreakdown: () => void;
   secureParkingSpot: () => void;
+  markShoppingComplete: () => void;
+  beginCheckout: () => void;
   reset: () => void;
 }
 
@@ -22,7 +28,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
   phase: 'MENU',
   audioUnlocked: false,
   nervousBreakdown: false,
+  checkoutWon: false,
   parkingSpotSecured: false,
+  shoppingListComplete: false,
 
   setPhase: (phase) => {
     const prev = get().phase;
@@ -44,17 +52,43 @@ export const useGameStore = create<GameStore>((set, get) => ({
   secureParkingSpot: () => {
     if (get().parkingSpotSecured) return;
     logTransition('Entered Costco warehouse -> SHOPPING');
-    set({ parkingSpotSecured: true, phase: 'SHOPPING' });
+    useSampleStationStore.getState().reset();
+    useCheckoutStore.getState().reset();
+    set({
+      parkingSpotSecured: true,
+      phase: 'SHOPPING',
+      shoppingListComplete: false,
+      checkoutWon: false,
+    });
     usePlayerStore.getState().setZone('AISLES');
+  },
+
+  markShoppingComplete: () => {
+    if (get().shoppingListComplete || get().phase !== 'SHOPPING') return;
+    logTransition('Shopping list complete — proceed to checkout');
+    useCheckoutStore.getState().initLanes();
+    set({ shoppingListComplete: true });
+  },
+
+  beginCheckout: () => {
+    if (!get().shoppingListComplete || get().checkoutWon || get().phase === 'CHECKOUT') return;
+    logTransition('Entered checkout area -> CHECKOUT');
+    useCheckoutStore.getState().initLanes();
+    set({ phase: 'CHECKOUT' });
+    usePlayerStore.getState().setZone('CHECKOUT');
   },
 
   reset: () => {
     logTransition('Session reset');
+    useSampleStationStore.getState().reset();
+    useCheckoutStore.getState().reset();
     set({
       phase: 'MENU',
       audioUnlocked: false,
       nervousBreakdown: false,
+      checkoutWon: false,
       parkingSpotSecured: false,
+      shoppingListComplete: false,
     });
   },
 }));

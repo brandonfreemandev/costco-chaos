@@ -5,9 +5,12 @@ import { useCartTransformStore } from '../../stores/cartTransformStore';
 import { useGameStore } from '../../stores/gameStore';
 import { NPC, type NPCConfig } from './NPC';
 import { CROSSWALK } from './parkingLotLayout';
+import { AISLE_CENTERS_X, CROSS_AISLES_Z, WH_DEPTH, WH_MAX_Z, WH_MIN_Z, QUEST_SHELF_POSITIONS } from './warehouseLayout';
 
 const DEFAULT_CULL_DISTANCE = 28;
 const DEFAULT_WAKE_DISTANCE = 32;
+/** Global walk-speed multiplier for all shoppers. */
+const NPC_SPEED_MUL = 1.85;
 
 interface CulledNPCProps {
   config: NPCConfig;
@@ -72,7 +75,7 @@ export function generateGauntletNPCs(): NPCConfig[] {
 
   const crossZ = CROSSWALK.z;
 
-  for (let i = 0; i < 14; i++) {
+  for (let i = 0; i < 5; i++) {
     seed += 17;
     const fromLeft = rnd(seed) > 0.5;
     const z = crossZ + jitter(seed + 1, 5);
@@ -83,7 +86,7 @@ export function generateGauntletNPCs(): NPCConfig[] {
     npcs.push({
       id: `gauntlet-x-${id++}`,
       archetype,
-      baseSpeed: 0.7 + rnd(seed + 5) * 1.4,
+      baseSpeed: (0.85 + rnd(seed + 5) * 1.6) * NPC_SPEED_MUL,
       obsessiveness: 20 + rnd(seed + 6) * 60,
       cartLoad: 0.9 + rnd(seed + 7) * 2.2,
       color: colors[Math.floor(rnd(seed + 8) * colors.length)],
@@ -102,7 +105,7 @@ export function generateGauntletNPCs(): NPCConfig[] {
     });
   }
 
-  for (let i = 0; i < 12; i++) {
+  for (let i = 0; i < 4; i++) {
     seed += 23;
     const x = jitter(seed, 5.5);
     const zStart = -14 + rnd(seed + 1) * 10;
@@ -112,7 +115,7 @@ export function generateGauntletNPCs(): NPCConfig[] {
     npcs.push({
       id: `gauntlet-z-${id++}`,
       archetype,
-      baseSpeed: 0.55 + rnd(seed + 4) * 1.1,
+      baseSpeed: (0.75 + rnd(seed + 4) * 1.3) * NPC_SPEED_MUL,
       obsessiveness: 30 + rnd(seed + 5) * 50,
       cartLoad: 1.2 + rnd(seed + 6) * 1.8,
       color: colors[Math.floor(rnd(seed + 7) * colors.length)],
@@ -125,7 +128,7 @@ export function generateGauntletNPCs(): NPCConfig[] {
     });
   }
 
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < 3; i++) {
     seed += 31;
     const side = rnd(seed) > 0.5 ? 1 : -1;
     const laneX = side * (5.5 + rnd(seed + 1) * 2.5);
@@ -134,7 +137,7 @@ export function generateGauntletNPCs(): NPCConfig[] {
     npcs.push({
       id: `gauntlet-lot-${id++}`,
       archetype: 'BLOCKER',
-      baseSpeed: 0.5 + rnd(seed + 3) * 0.9,
+      baseSpeed: (0.7 + rnd(seed + 3) * 1.1) * NPC_SPEED_MUL,
       obsessiveness: 15 + rnd(seed + 4) * 40,
       cartLoad: 1.4 + rnd(seed + 5) * 1.2,
       color: colors[Math.floor(rnd(seed + 6) * colors.length)],
@@ -147,7 +150,7 @@ export function generateGauntletNPCs(): NPCConfig[] {
     });
   }
 
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 2; i++) {
     seed += 37;
     const z = 6 - i * 3.5 + jitter(seed, 1.2);
     const x = jitter(seed + 1, 3.2);
@@ -155,7 +158,7 @@ export function generateGauntletNPCs(): NPCConfig[] {
     npcs.push({
       id: `gauntlet-approach-${id++}`,
       archetype: rnd(seed + 2) > 0.6 ? 'AGGRESSOR' : 'SAMPLE_HUNTER',
-      baseSpeed: 0.6 + rnd(seed + 3) * 1.0,
+      baseSpeed: (0.8 + rnd(seed + 3) * 1.2) * NPC_SPEED_MUL,
       obsessiveness: 25,
       cartLoad: 1.0 + rnd(seed + 4) * 1.5,
       color: colors[Math.floor(rnd(seed + 5) * colors.length)],
@@ -172,32 +175,76 @@ export function generateGauntletNPCs(): NPCConfig[] {
   return npcs;
 }
 
-export function generateWarehouseNPCs(aisleLength: number): NPCConfig[] {
+export function generateWarehouseNPCs(): NPCConfig[] {
   const npcs: NPCConfig[] = [];
   const colors = ['#b8a48c', '#9a9a9a', '#c4a882', '#8aa4c4', '#d46a6a', '#a89078', '#7a8a9a'];
   const archetypes = ['BLOCKER', 'BLOCKER', 'AGGRESSOR', 'SAMPLE_HUNTER'] as const;
   let id = 0;
   let seed = 99;
 
-  for (let i = 0; i < 28; i++) {
+  for (let i = 0; i < 8; i++) {
     seed += 13;
-    const laneX = (i % 2 === 0 ? -1 : 1) * (0.8 + rnd(seed) * 2.2);
-    const zStart = -aisleLength / 2 + 3 + rnd(seed + 1) * (aisleLength - 8);
-    const zEnd = zStart + 5 + rnd(seed + 2) * 10;
-    const archetype = archetypes[Math.floor(rnd(seed + 3) * archetypes.length)];
+    const useCross = rnd(seed) > 0.45;
+    const archetype = archetypes[Math.floor(rnd(seed + 1) * archetypes.length)];
 
+    if (useCross) {
+      const crossZ = CROSS_AISLES_Z[Math.floor(rnd(seed + 2) * CROSS_AISLES_Z.length)];
+      const xStart = -14 + rnd(seed + 3) * 28;
+      const xEnd = xStart + (rnd(seed + 4) > 0.5 ? 1 : -1) * (6 + rnd(seed + 5) * 10);
+      npcs.push({
+        id: `wh-cross-${id++}`,
+        archetype,
+        baseSpeed: (0.65 + rnd(seed + 6) * 0.95) * NPC_SPEED_MUL,
+        obsessiveness: 10 + rnd(seed + 7) * 50,
+        cartLoad: archetype === 'BLOCKER' ? 1.6 + rnd(seed + 8) * 1.4 : 0.8 + rnd(seed + 9) * 0.7,
+        color: colors[i % colors.length],
+        chaos: 0.35 + rnd(seed + 10) * 0.5,
+        waypoints: [
+          [xStart, 0, crossZ + jitter(seed + 11, 1.2)],
+          [xStart + jitter(seed + 12, 3), 0, crossZ + jitter(seed + 13, 0.8)],
+          [xEnd, 0, crossZ + jitter(seed + 14, 1.2)],
+        ],
+      });
+    } else {
+      const laneX = AISLE_CENTERS_X[Math.floor(rnd(seed + 2) * AISLE_CENTERS_X.length)];
+      const zStart = WH_MIN_Z + 4 + rnd(seed + 3) * (WH_DEPTH - 10);
+      const zSpan = 6 + rnd(seed + 4) * 14;
+      const zEnd = Math.max(WH_MIN_Z + 3, Math.min(WH_MAX_Z - 3, zStart + (rnd(seed + 5) > 0.5 ? zSpan : -zSpan)));
+      npcs.push({
+        id: `wh-aisle-${id++}`,
+        archetype,
+        baseSpeed: (0.7 + rnd(seed + 6) * 1.05) * NPC_SPEED_MUL,
+        obsessiveness: 10 + rnd(seed + 7) * 50,
+        cartLoad: archetype === 'BLOCKER' ? 1.8 + rnd(seed + 8) * 1.2 : 0.8 + rnd(seed + 9) * 0.6,
+        color: colors[i % colors.length],
+        chaos: 0.35 + rnd(seed + 10) * 0.5,
+        waypoints: [
+          [laneX + jitter(seed + 11, 1.2), 0, zStart],
+          [laneX + jitter(seed + 12, 1.8), 0, (zStart + zEnd) / 2 + jitter(seed + 13, 2)],
+          [laneX + jitter(seed + 14, 1.2), 0, zEnd],
+        ],
+      });
+    }
+  }
+
+  // Patrol near quest shelves — extra friction without crowding every aisle
+  for (let q = 0; q < QUEST_SHELF_POSITIONS.length; q++) {
+    seed += 19;
+    const shelf = QUEST_SHELF_POSITIONS[q];
+    const laneX = shelf.aisle;
+    const archetype = q % 2 === 0 ? 'BLOCKER' : 'SAMPLE_HUNTER';
     npcs.push({
-      id: `wh-crowd-${id++}`,
+      id: `wh-quest-${id++}`,
       archetype,
-      baseSpeed: 0.45 + rnd(seed + 4) * 0.85,
-      obsessiveness: 10 + rnd(seed + 5) * 50,
-      cartLoad: archetype === 'BLOCKER' ? 1.8 + rnd(seed + 6) * 1.2 : 0.8 + rnd(seed + 7) * 0.6,
-      color: colors[i % colors.length],
-      chaos: 0.35 + rnd(seed + 8) * 0.5,
+      baseSpeed: (0.55 + rnd(seed) * 0.75) * NPC_SPEED_MUL,
+      obsessiveness: 35 + rnd(seed + 1) * 45,
+      cartLoad: archetype === 'BLOCKER' ? 1.7 + rnd(seed + 2) * 1.1 : 0.9 + rnd(seed + 3) * 0.5,
+      color: colors[(q + 3) % colors.length],
+      chaos: 0.42 + rnd(seed + 4) * 0.38,
       waypoints: [
-        [laneX, 0.95, zStart],
-        [laneX + jitter(seed + 9, 2.5), 0.95, (zStart + zEnd) / 2 + jitter(seed + 10, 2)],
-        [laneX + jitter(seed + 11, 1.2), 0.95, zEnd],
+        [laneX + jitter(seed + 5, 1.4), 0, shelf.z + jitter(seed + 6, 2)],
+        [shelf.x + jitter(seed + 7, 1.8), 0, shelf.z + jitter(seed + 8, 1.5)],
+        [laneX - jitter(seed + 9, 1.2), 0, shelf.z - 3 + jitter(seed + 10, 2)],
       ],
     });
   }
