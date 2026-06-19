@@ -1,6 +1,7 @@
 import {
   APPROACH_CART_OBSTACLES,
   BUILDING,
+  ENTRANCE_ALCOVE,
   generateParkedCars,
   LOT,
 } from '../components/scene/parkingLotLayout';
@@ -12,6 +13,10 @@ import {
   WH_MIN_X,
   WH_MIN_Z,
 } from '../components/scene/warehouseLayout';
+import { useCartTransformStore } from '../stores/cartTransformStore';
+import { useGameStore } from '../stores/gameStore';
+import type { GamePhase } from '../types/state';
+import { SAMPLE_KIOSKS } from './sampleStations';
 import { getActiveNpcRuntimes } from './npcRegistry';
 
 export interface Aabb {
@@ -23,6 +28,12 @@ export interface Aabb {
 
 export const CART_HALF_X = 0.55;
 export const CART_HALF_Z = 0.95;
+
+export function getNpcHalfExtents(cartLoad: number): { hx: number; hz: number } {
+  const hasCart = cartLoad > 1.2;
+  return { hx: hasCart ? 0.72 : 0.42, hz: hasCart ? 1.35 : 0.42 };
+}
+
 const SKIN = 0.05;
 const SUBSTEP = 0.18;
 
@@ -73,7 +84,16 @@ export function getParkingObstacles(): Aabb[] {
   for (const cart of APPROACH_CART_OBSTACLES) {
     boxes.push(blockAabb(cart.x, cart.z, 0.65, 1.0));
   }
-  boxes.push(blockAabb(0, BUILDING.centerZ, BUILDING.width, BUILDING.depth));
+  // Building shell — wings + back block; recessed entrance alcove stays walkable
+  const bHalf = BUILDING.width / 2;
+  const aHalf = ENTRANCE_ALCOVE.width / 2;
+  const wingW = bHalf - aHalf;
+  const wingX = aHalf + wingW / 2;
+  boxes.push(blockAabb(-wingX, BUILDING.centerZ, wingW, BUILDING.depth));
+  boxes.push(blockAabb(wingX, BUILDING.centerZ, wingW, BUILDING.depth));
+  const backMinZ = BUILDING.centerZ - BUILDING.depth / 2;
+  const backMaxZ = ENTRANCE_ALCOVE.backZ - 0.5;
+  boxes.push(blockAabb(0, (backMinZ + backMaxZ) / 2, BUILDING.width, backMaxZ - backMinZ));
   boxes.push({ minX: LOT.minX - 1, maxX: LOT.maxX + 1, minZ: LOT.minZ - 1, maxZ: LOT.minZ + 0.5 });
   boxes.push({ minX: LOT.minX - 1, maxX: LOT.maxX + 1, minZ: LOT.maxZ - 0.5, maxZ: LOT.maxZ + 1 });
   boxes.push({ minX: LOT.minX - 1, maxX: LOT.minX + 0.5, minZ: LOT.minZ, maxZ: LOT.maxZ });
@@ -89,9 +109,7 @@ export function getParkingObstacles(): Aabb[] {
 export function getNpcObstacles(): Aabb[] {
   const boxes: Aabb[] = [];
   for (const npc of getActiveNpcRuntimes()) {
-    const hasCart = npc.meta.cartLoad > 1.2;
-    const hx = hasCart ? 0.72 : 0.42;
-    const hz = hasCart ? 1.35 : 0.42;
+    const { hx, hz } = getNpcHalfExtents(npc.meta.cartLoad);
     boxes.push({
       minX: npc.x - hx,
       maxX: npc.x + hx,
@@ -99,6 +117,51 @@ export function getNpcObstacles(): Aabb[] {
       maxZ: npc.z + hz,
     });
   }
+  return boxes;
+}
+
+/** Player cart hull for NPC manual blocking (player uses manual motion too). */
+export function getPlayerObstacle(): Aabb | null {
+  const phase = useGameStore.getState().phase;
+  if (phase !== 'PARKING' && phase !== 'SHOPPING' && phase !== 'CHECKOUT') return null;
+
+  const { position } = useCartTransformStore.getState();
+  return {
+    minX: position.x - CART_HALF_X,
+    maxX: position.x + CART_HALF_X,
+    minZ: position.z - CART_HALF_Z,
+    maxZ: position.z + CART_HALF_Z,
+  };
+}
+
+/** Sample counter footprint — blocks NPCs, not the player (cart rolls through the ring). */
+function getSampleKioskObstacles(): Aabb[] {
+  return SAMPLE_KIOSKS.map((kiosk) => blockAabb(kiosk.x, kiosk.z, 1.75, 0.75));
+}
+
+/** Static + player + other shoppers (+ sample counters in warehouse). */
+export function getNpcMovementObstacles(phase: GamePhase, excludeNpcId: string): Aabb[] {
+  const boxes =
+    phase === 'PARKING' ? getParkingObstacles().slice() : getWarehouseObstacles().slice();
+
+  if (phase === 'SHOPPING' || phase === 'CHECKOUT') {
+    boxes.push(...getSampleKioskObstacles());
+  }
+
+  const player = getPlayerObstacle();
+  if (player) boxes.push(player);
+
+  for (const npc of getActiveNpcRuntimes()) {
+    if (npc.meta.npcId === excludeNpcId) continue;
+    const { hx, hz } = getNpcHalfExtents(npc.meta.cartLoad);
+    boxes.push({
+      minX: npc.x - hx,
+      maxX: npc.x + hx,
+      minZ: npc.z - hz,
+      maxZ: npc.z + hz,
+    });
+  }
+
   return boxes;
 }
 

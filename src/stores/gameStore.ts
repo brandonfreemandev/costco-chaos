@@ -3,6 +3,7 @@ import type { GamePhase } from '../types/state';
 import { useCheckoutStore } from './checkoutStore';
 import { usePlayerStore } from './playerStore';
 import { useSampleStationStore } from './sampleStationStore';
+import { grantSpawnBumpGrace, resetNpcBumpCooldowns } from '../systems/handleCollision';
 
 interface GameStore {
   phase: GamePhase;
@@ -55,6 +56,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     logTransition('Entered Costco warehouse -> SHOPPING');
     useSampleStationStore.getState().reset();
     useCheckoutStore.getState().reset();
+    resetNpcBumpCooldowns();
+    grantSpawnBumpGrace();
     set({
       parkingSpotSecured: true,
       phase: 'SHOPPING',

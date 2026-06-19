@@ -52,7 +52,7 @@ function SceneContent() {
       />
       {!inWarehouse && <hemisphereLight args={['#42a5f5', '#6d9e4a', 0.55]} />}
 
-      <PerspectiveCamera makeDefault fov={76} near={0.08} far={160} position={[0, 1.62, -8]} />
+      <PerspectiveCamera makeDefault fov={76} near={0.04} far={160} position={[0, 1.62, -8]} />
       <FirstPersonCartCamera />
 
       <Physics gravity={[0, -9.81, 0]} timeStep={1 / 60}>

@@ -9,12 +9,19 @@ export const MIN_IMPACT = 0.15;
 export const MAX_IMPACT = 8.0;
 
 const proximityCooldowns = new Map<string, number>();
+let spawnBumpGraceUntil = 0;
+
+/** Brief bump immunity after entering the warehouse (fair spawn). */
+export function grantSpawnBumpGrace(ms = 2800): void {
+  spawnBumpGraceUntil = performance.now() + ms;
+}
 
 export function handleNpcCollision(
   playerSpeed: number,
   entitySpeed: number,
   cartLoad: number,
 ): void {
+  if (performance.now() < spawnBumpGraceUntil) return;
   const combined = playerSpeed + entitySpeed;
   const rawForce = Math.max(Math.abs(playerSpeed - entitySpeed), combined * 0.4) * cartLoad;
   const impactForce = Math.max(0.5, rawForce);
@@ -64,4 +71,5 @@ export function tryNpcProximityBump(
 
 export function resetNpcBumpCooldowns(): void {
   proximityCooldowns.clear();
+  spawnBumpGraceUntil = 0;
 }

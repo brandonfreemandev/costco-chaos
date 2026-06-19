@@ -4,7 +4,7 @@ import { useCartTransformStore } from '../../stores/cartTransformStore';
 import { CHECKOUT_MEZZANINE } from '../scene/checkoutLayout';
 import { FRONT_COURT_MIN_Z, CROSS_AISLES_Z, WH_DEPTH, WH_MAX_Z, WH_MIN_X, WH_WIDTH } from '../scene/warehouseLayout';
 
-const MAP_W = 220;
+const MAP_W = 168;
 const MAP_H = Math.round((WH_DEPTH / WH_WIDTH) * MAP_W);
 
 function toMapX(wx: number): number {
@@ -23,7 +23,7 @@ const ITEM_SHORT: Record<string, string> = {
 };
 
 /** Top-down warehouse map — player dot + quest item pins. */
-export function WarehouseMap() {
+export function WarehouseMap({ floating = false }: { floating?: boolean }) {
   const phase = useGameStore((s) => s.phase);
   const shoppingListComplete = useGameStore((s) => s.shoppingListComplete);
   const items = usePlayerStore((s) => s.inventory.items);
@@ -39,8 +39,8 @@ export function WarehouseMap() {
   const courtD = WH_MAX_Z - FRONT_COURT_MIN_Z;
 
   return (
-    <section className="sidebar-section warehouse-map-section">
-      <div className="section-label">Store Map</div>
+    <section className={floating ? 'float-hud float-hud-map' : 'sidebar-section warehouse-map-section'}>
+      <div className={floating ? 'float-hud-label' : 'section-label'}>Store Map</div>
       <svg
         className="warehouse-map"
         viewBox={`0 0 ${MAP_W} ${MAP_H}`}
@@ -82,7 +82,7 @@ export function WarehouseMap() {
           className="map-checkout-label"
           textAnchor="middle"
         >
-          CHECKOUT L2
+          CHECKOUT
         </text>
 
         <rect
@@ -93,19 +93,16 @@ export function WarehouseMap() {
           className="map-cooler"
           rx={2}
         />
-        <text x={toMapX(-11)} y={toMapY(-24) + 4} className="map-cooler-label" textAnchor="middle">
-          MEAT
-        </text>
 
         {items.map((item) => (
           <g key={item.id}>
             <circle
               cx={toMapX(item.worldPosition.x)}
               cy={toMapY(item.worldPosition.z)}
-              r={item.collected ? 3 : 5}
+              r={item.collected ? 2.5 : 4}
               className={item.collected ? 'map-pin map-pin-done' : 'map-pin map-pin-quest'}
             />
-            {!item.collected && (
+            {!item.collected && !floating && (
               <text
                 x={toMapX(item.worldPosition.x)}
                 y={toMapY(item.worldPosition.z) - 8}
@@ -118,15 +115,17 @@ export function WarehouseMap() {
           </g>
         ))}
 
-        <circle cx={toMapX(px)} cy={toMapY(pz)} r={6} className="map-player" />
-        <text x={toMapX(px)} y={toMapY(pz) + 3.5} className="map-player-icon" textAnchor="middle">
+        <circle cx={toMapX(px)} cy={toMapY(pz)} r={5} className="map-player" />
+        <text x={toMapX(px)} y={toMapY(pz) + 3} className="map-player-icon" textAnchor="middle">
           ▲
         </text>
       </svg>
 
-      <p className="map-hint">
-        North (top) = entrance &amp; checkout. Complete your list, then drive north.
-      </p>
+      {!floating && (
+        <p className="map-hint">
+          North (top) = entrance &amp; checkout. Complete your list, then drive north.
+        </p>
+      )}
     </section>
   );
 }

@@ -1,10 +1,8 @@
 import { useGameStore } from '../../stores/gameStore';
 import { usePlayerStore } from '../../stores/playerStore';
 import { useUIStore } from '../../stores/uiStore';
-import { MentalHealthGauge } from './MentalHealthGauge';
-import { ShoppingListGrid } from './ShoppingListGrid';
 import { CheckoutPanel } from './CheckoutPanel';
-import { WarehouseMap } from './WarehouseMap';
+import { ShoppingListGrid } from './ShoppingListGrid';
 
 export function GameSidebar() {
   const phase = useGameStore((s) => s.phase);
@@ -59,8 +57,6 @@ export function GameSidebar() {
         </header>
 
         <div className="sidebar-scroll">
-          <MentalHealthGauge />
-
           <section className="sidebar-section">
             <div className="section-label">Objective</div>
             <p className="objective-copy">
@@ -79,8 +75,6 @@ export function GameSidebar() {
           <ShoppingListGrid />
 
           <CheckoutPanel />
-
-          {(phase === 'SHOPPING' || phase === 'CHECKOUT') && <WarehouseMap />}
 
           <section className="sidebar-section stats-section">
             <div className="section-label">Cart Stats</div>

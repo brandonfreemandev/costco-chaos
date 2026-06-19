@@ -5,10 +5,12 @@ import { useCheckoutStore } from '../../stores/checkoutStore';
 import { useSampleStationStore } from '../../stores/sampleStationStore';
 import { isInCheckoutApproach } from '../scene/checkoutLayout';
 import { SAMPLE_KIOSKS, SAMPLE_MH_RESTORE } from '../../systems/sampleStations';
+import { MentalHealthGauge } from './MentalHealthGauge';
+import { WarehouseMap } from './WarehouseMap';
 
 const COOLDOWN_MS = 28_000;
 
-/** Lightweight viewport overlays — sidebar holds the main HUD. */
+/** Viewport overlays — floating reference HUD + contextual toasts. */
 export function GameHud() {
   const phase = useGameStore((s) => s.phase);
   const parkingSpotSecured = useGameStore((s) => s.parkingSpotSecured);
@@ -42,8 +44,15 @@ export function GameHud() {
 
   if (phase === 'MENU') return null;
 
+  const showMap = phase === 'SHOPPING' || phase === 'CHECKOUT';
+
   return (
     <div className="viewport-hud">
+      <div className="float-hud-stack">
+        <MentalHealthGauge floating />
+        {showMap && <WarehouseMap floating />}
+      </div>
+
       {samplePrompt && (
         <div className="toast-banner toast-sample">{samplePrompt}</div>
       )}
@@ -70,7 +79,7 @@ export function GameHud() {
 
       {phase === 'PARKING' && !parkingSpotSecured && (
         <div className="toast-banner toast-objective">
-          Target: Green mat. Hazard: Everything. Press I to skip inside (dev).
+          Target: Green mat in covered entrance. Hazard: Everything. Press I to skip inside (dev).
         </div>
       )}
 

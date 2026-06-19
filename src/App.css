@@ -57,6 +57,67 @@ button {
   z-index: 2;
 }
 
+/* ── Floating reference HUD (MH + map) ───────────── */
+
+.float-hud-stack {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  max-width: min(200px, 28vw);
+}
+
+.float-hud {
+  pointer-events: none;
+  background: rgba(15, 23, 42, 0.82);
+  border: 1px solid rgba(100, 116, 139, 0.55);
+  border-radius: 10px;
+  padding: 8px 10px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+}
+
+.float-hud-mh {
+  width: 188px;
+}
+
+.float-hud-map {
+  width: 188px;
+}
+
+.float-hud-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #94a3b8;
+  margin-bottom: 6px;
+}
+
+.float-hud-mh .mental-health-row {
+  gap: 8px;
+}
+
+.float-hud-mh .mental-health-track {
+  height: 8px;
+}
+
+.float-hud-mh .mental-health-value {
+  font-size: 12px;
+  min-width: 32px;
+}
+
+.float-hud-map .warehouse-map {
+  border-radius: 4px;
+}
+
+.float-hud-map .map-player {
+  stroke-width: 1.5;
+}
+
 /* ── Sidebar ─────────────────────────────────────── */
 
 .game-sidebar {

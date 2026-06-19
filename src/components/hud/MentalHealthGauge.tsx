@@ -7,15 +7,15 @@ function healthColor(value: number): string {
   return '#ef4444';
 }
 
-export function MentalHealthGauge() {
+export function MentalHealthGauge({ floating = false }: { floating?: boolean }) {
   const mentalHealth = usePlayerStore((s) => s.mentalHealth);
   const bumpFlash = useUIStore((s) => s.bumpFlash);
   const healFlash = useUIStore((s) => s.healFlash);
   const damagePulse = useUIStore((s) => s.damagePulse);
 
   return (
-    <section className="sidebar-section mental-health-section">
-      <div className="section-label">Mental Health</div>
+    <section className={floating ? 'float-hud float-hud-mh' : 'sidebar-section mental-health-section'}>
+      <div className={floating ? 'float-hud-label' : 'section-label'}>Mental Health</div>
       <div className="mental-health-row">
         <div className="mental-health-track">
           <div

@@ -24,6 +24,7 @@ import {
   BUILDING,
   CART_CORRALS,
   CROSSWALK,
+  ENTRANCE_ALCOVE,
   ENTRANCE_MARKER,
   APPROACH_CART_OBSTACLES,
   generateParkedCars,
@@ -177,8 +178,8 @@ export function ParkingLot() {
         <planeGeometry args={[SIDEWALK.width, SIDEWALK.depth]} />
       </mesh>
 
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.043, BUILDING.frontZ + 2]} receiveShadow material={concreteMat}>
-        <planeGeometry args={[BUILDING.entranceWidth + 4, 4]} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.043, BUILDING.frontZ + 3.5]} receiveShadow material={concreteMat}>
+        <planeGeometry args={[ENTRANCE_ALCOVE.width + 2, 8]} />
       </mesh>
 
       <CrosswalkStripes />
@@ -205,9 +206,6 @@ export function ParkingLot() {
         <meshStandardMaterial color="#15803d" emissive="#22c55e" emissiveIntensity={0.35} roughness={0.75} />
       </mesh>
       <pointLight position={[ENTRANCE_MARKER.x, 2.5, ENTRANCE_MARKER.z]} intensity={0.5} color="#4ade80" distance={8} decay={2} />
-      <Text position={[ENTRANCE_MARKER.x, 3.2, BUILDING.frontZ + 0.85]} fontSize={0.38} color="#dcfce7" anchorX="center">
-        ENTRANCE
-      </Text>
 
       <CostcoBuilding />
 

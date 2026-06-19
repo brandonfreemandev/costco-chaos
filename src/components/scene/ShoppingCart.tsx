@@ -20,7 +20,6 @@ import {
   REVERSE_ACCEL,
   TURN_RATE,
 } from '../../systems/physicsController';
-import { tryHandlePlayerNpcCollision } from '../../systems/handleCollision';
 import { applyNpcBumps } from '../../systems/npcBumps';
 import {
   getNpcObstacles,
@@ -35,10 +34,11 @@ import {
   isInCheckoutApproach,
 } from './checkoutLayout';
 import { WH_MAX_X, WH_MAX_Z, WH_MIN_X, WH_MIN_Z } from './warehouseLayout';
-import { CartModel, cartBodyY } from './CartModel';
+import { cartBodyY } from './CartModel';
 import { OUTDOOR_GROUND_Y } from './npcGrounding';
 
-const PLAYER_COLLISION_GROUPS = interactionGroups(COLLISION_GROUP.PLAYER, [COLLISION_GROUP.NPC]);
+/** Cart motion + NPC blocks are resolved manually — no Rapier NPC overlap (avoids post-bump jitter). */
+const PLAYER_COLLISION_GROUPS = interactionGroups(COLLISION_GROUP.PLAYER, []);
 
 const yawQuat = new THREE.Quaternion();
 const euler = new THREE.Euler(0, 0, 0, 'YXZ');
@@ -51,7 +51,6 @@ export function ShoppingCart() {
   const itemsRemaining = usePlayerStore((s) => s.inventory.itemsRemaining);
   const phase = useGameStore((s) => s.phase);
   const listCompleteFired = useRef(false);
-  const lastCollisionAt = useRef(0);
   const yawRef = useRef<number>(PLAYER_SPAWN.yaw);
   const lastPhase = useRef<string | null>(null);
   const posRef = useRef({ x: PLAYER_SPAWN.x as number, z: PLAYER_SPAWN.z as number });
@@ -224,19 +223,8 @@ export function ShoppingCart() {
       position={[spawn.x, cartBodyY(spawnFloor), spawn.z]}
       enabledRotations={[false, true, false]}
       collisionGroups={PLAYER_COLLISION_GROUPS}
-      onCollisionEnter={({ other }) => {
-        const now = performance.now();
-        if (now - lastCollisionAt.current < 350) return;
-        const otherBody = other.rigidBody;
-        const hit = tryHandlePlayerNpcCollision(
-          Math.hypot(vxRef.current, vzRef.current),
-          otherBody?.handle,
-          otherBody?.linvel(),
-        );
-        if (hit) lastCollisionAt.current = now;
-      }}
     >
-      <CartModel showHandle={false} />
+      {/* FP cart visuals live on FirstPersonCartCamera — collider-only body here */}
     </RigidBody>
   );
 }

@@ -6,7 +6,13 @@ import type { NPCArchetype } from '../../types/state';
 import { COLLISION_GROUP } from '../../types/state';
 import { registerNpc, unregisterNpc, updateNpcRuntime } from '../../systems/npcRegistry';
 import { useSampleStationStore } from '../../stores/sampleStationStore';
+import { useGameStore } from '../../stores/gameStore';
 import { SAMPLE_SWARM_RADIUS } from '../../systems/sampleStations';
+import {
+  getNpcHalfExtents,
+  getNpcMovementObstacles,
+  resolveCartMove,
+} from '../../systems/staticObstacles';
 
 export interface NPCConfig {
   id: string;
@@ -64,6 +70,17 @@ export function NPC({ config }: NPCProps) {
 
     const position = body.translation();
     const meta = { isNpc: true as const, cartLoad: config.cartLoad, npcId: config.id };
+    const { hx, hz } = getNpcHalfExtents(config.cartLoad);
+    const phase = useGameStore.getState().phase;
+    const obstacles = getNpcMovementObstacles(phase, config.id);
+
+    const applyPosition = (x: number, z: number, speed: number) => {
+      const settled = resolveCartMove(x, z, 0, 0, obstacles, hx, hz);
+      body.setTranslation({ x: settled.x, y: NPC_BODY_CENTER_Y, z: settled.z }, true);
+      body.setLinvel({ x: 0, y: 0, z: 0 }, true);
+      updateNpcRuntime(body.handle, meta, settled.x, settled.z, speed);
+    };
+
     let speed = 0;
 
     if (!registered.current) {
@@ -75,8 +92,7 @@ export function NPC({ config }: NPCProps) {
     wanderPhase.current += delta * (1.2 + chaos * 2.4);
 
     if (now < pauseUntil.current) {
-      body.setLinvel({ x: 0, y: 0, z: 0 }, true);
-      updateNpcRuntime(body.handle, meta, position.x, position.z, 0);
+      applyPosition(position.x, position.z, 0);
       return;
     }
 
@@ -85,7 +101,7 @@ export function NPC({ config }: NPCProps) {
     }
 
     if (config.waypoints.length < 2) {
-      updateNpcRuntime(body.handle, meta, position.x, position.z, 0);
+      applyPosition(position.x, position.z, 0);
       return;
     }
 
@@ -129,7 +145,7 @@ export function NPC({ config }: NPCProps) {
         0,
         Math.min(config.waypoints.length - 1, waypointIndex.current + direction.current),
       );
-      updateNpcRuntime(body.handle, meta, position.x, position.z, 0);
+      applyPosition(position.x, position.z, 0);
       return;
     }
 
@@ -148,12 +164,19 @@ export function NPC({ config }: NPCProps) {
     const sampleBoost = chasingSample ? (config.archetype === 'SAMPLE_HUNTER' ? 1.65 : 1.35) : 1;
     speed = config.baseSpeed * speedJitter * archetypeBoost * sampleBoost;
 
-    body.setLinvel({ x: toTarget.x * speed, y: 0, z: toTarget.z * speed }, true);
+    const dt = Math.min(delta, 0.05);
+    const dx = toTarget.x * speed * dt;
+    const dz = toTarget.z * speed * dt;
+    const moved = resolveCartMove(position.x, position.z, dx, dz, obstacles, hx, hz);
 
     const angle = Math.atan2(toTarget.x, toTarget.z);
     body.setRotation(new THREE.Quaternion().setFromEuler(new THREE.Euler(0, angle, 0)), true);
 
-    updateNpcRuntime(body.handle, meta, position.x, position.z, speed);
+    const reportSpeed =
+      Math.abs(moved.x - (position.x + dx)) > 0.02 || Math.abs(moved.z - (position.z + dz)) > 0.02
+        ? 0
+        : speed;
+    applyPosition(moved.x, moved.z, reportSpeed);
   }, -1);
 
   const start = config.waypoints[0];
@@ -163,12 +186,12 @@ export function NPC({ config }: NPCProps) {
   return (
     <RigidBody
       ref={bodyRef}
-      type="kinematicVelocity"
+      type="kinematicPosition"
       colliders="cuboid"
       args={[width, 1.05, hasCart ? 1.35 : 0.42]}
       position={[start[0], NPC_BODY_CENTER_Y, start[2]]}
       friction={0.8}
-      collisionGroups={interactionGroups(COLLISION_GROUP.NPC, [COLLISION_GROUP.PLAYER, COLLISION_GROUP.STATIC])}
+      collisionGroups={interactionGroups(COLLISION_GROUP.NPC, [])}
     >
       <group position={[0, SHOPPER_AVATAR_Y_OFFSET, 0]}>
         <ShopperAvatar

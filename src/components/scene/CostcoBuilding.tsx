@@ -1,7 +1,12 @@
 import { RigidBody, interactionGroups } from '@react-three/rapier';
 import { Text } from '@react-three/drei';
 import { COLLISION_GROUP } from '../../types/state';
-import { BUILDING } from './parkingLotLayout';
+import { BUILDING, ENTRANCE_ALCOVE } from './parkingLotLayout';
+
+const WALL = { color: '#8a8580', roughness: 0.82, metalness: 0.1, envMapIntensity: 0.9 };
+const CONCRETE = { color: '#b8b4ac', roughness: 0.88, metalness: 0.04 };
+const SOFFIT = { color: '#6a6560', roughness: 0.78, metalness: 0.08 };
+const RAIL = { color: '#9ca3af', roughness: 0.38, metalness: 0.78 };
 
 function WallSegment({
   position,
@@ -20,9 +25,93 @@ function WallSegment({
     >
       <mesh castShadow receiveShadow>
         <boxGeometry args={args} />
-        <meshStandardMaterial color="#8a8580" roughness={0.82} metalness={0.1} envMapIntensity={0.9} />
+        <meshStandardMaterial {...WALL} />
       </mesh>
     </RigidBody>
+  );
+}
+
+/** Recessed cart-collection alcove with covered ceiling and doors at the back wall. */
+function RecessedEntrance() {
+  const { width, backZ, mouthZ, ceilingY, wallH } = ENTRANCE_ALCOVE;
+  const halfW = width / 2;
+  const midZ = (mouthZ + backZ) / 2;
+  const alcoveLen = mouthZ - backZ;
+
+  return (
+    <group>
+      {/* Alcove floor slab */}
+      <mesh position={[0, 0.1, midZ]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <planeGeometry args={[width - 0.4, alcoveLen + 0.6]} />
+        <meshStandardMaterial {...CONCRETE} />
+      </mesh>
+
+      {/* Covered ceiling / soffit */}
+      <mesh castShadow position={[0, ceilingY, midZ]}>
+        <boxGeometry args={[width, 0.35, alcoveLen + 0.5]} />
+        <meshStandardMaterial {...SOFFIT} />
+      </mesh>
+      <mesh position={[0, ceilingY - 0.22, midZ]}>
+        <boxGeometry args={[width - 0.6, 0.06, alcoveLen]} />
+        <meshStandardMaterial color="#4a5568" roughness={0.55} metalness={0.2} />
+      </mesh>
+
+      {/* Side wing walls */}
+      <WallSegment position={[-halfW, wallH / 2 + 0.1, midZ]} args={[0.45, wallH, alcoveLen + 0.4]} />
+      <WallSegment position={[halfW, wallH / 2 + 0.1, midZ]} args={[0.45, wallH, alcoveLen + 0.4]} />
+
+      {/* Back wall with sliding door bank */}
+      <mesh castShadow position={[0, wallH / 2 + 0.1, backZ - 0.12]}>
+        <boxGeometry args={[width - 0.8, wallH, 0.35]} />
+        <meshStandardMaterial color="#3d4450" roughness={0.5} metalness={0.35} />
+      </mesh>
+      {[-2.4, 0, 2.4].map((x) => (
+        <mesh key={x} position={[x, 2.6, backZ + 0.08]}>
+          <boxGeometry args={[2.0, 4.6, 0.1]} />
+          <meshStandardMaterial
+            color="#93c5fd"
+            transparent
+            opacity={0.42}
+            metalness={0.65}
+            roughness={0.08}
+            envMapIntensity={1.4}
+          />
+        </mesh>
+      ))}
+
+      {/* Cart-collection rails along alcove sides */}
+      {[-1, 1].map((side) => (
+        <group key={side}>
+          <mesh castShadow position={[side * (halfW - 0.55), 0.55, midZ - 0.8]}>
+            <boxGeometry args={[0.05, 0.05, alcoveLen - 1.6]} />
+            <meshStandardMaterial {...RAIL} />
+          </mesh>
+          <mesh castShadow position={[side * (halfW - 0.55), 0.28, midZ - 0.8]}>
+            <boxGeometry args={[0.04, 0.04, alcoveLen - 1.6]} />
+            <meshStandardMaterial {...RAIL} />
+          </mesh>
+        </group>
+      ))}
+
+      {/* Scattered cart silhouettes in the alcove */}
+      {[
+        [-3.2, -1.2],
+        [2.8, -2.4],
+        [-1.5, -3.8],
+      ].map(([x, zOff], i) => (
+        <mesh key={i} castShadow position={[x, 0.42, midZ + zOff]}>
+          <boxGeometry args={[0.55, 0.75, 0.85]} />
+          <meshStandardMaterial color="#707780" roughness={0.55} metalness={0.45} />
+        </mesh>
+      ))}
+
+      <Text position={[0, 4.2, mouthZ - 0.4]} fontSize={0.34} color="#dcfce7" anchorX="center">
+        ENTRANCE
+      </Text>
+
+      <pointLight position={[0, ceilingY - 0.5, midZ]} intensity={1.1} color="#fff5e6" distance={16} decay={2} />
+      <pointLight position={[0, 3.2, backZ + 1.2]} intensity={0.65} color="#dbeafe" distance={10} decay={2} />
+    </group>
   );
 }
 
@@ -47,7 +136,7 @@ export function CostcoBuilding() {
       {/* Blue band */}
       <mesh castShadow position={[0, height - 0.8, frontZ + 0.35]}>
         <boxGeometry args={[width - 2, 1.4, 0.4]} />
-        <meshStandardMaterial color="#005daa" roughness={0.42} metalness={0.25} />
+        <meshStandardMaterial color="#005dab" roughness={0.42} metalness={0.25} />
       </mesh>
       {/* Red stripe */}
       <mesh position={[0, height - 0.8, frontZ + 0.7]}>
@@ -68,34 +157,7 @@ export function CostcoBuilding() {
         COSTCO WHOLESALE
       </Text>
 
-      <group position={[0, 2.8, frontZ + 0.55]}>
-        <mesh castShadow>
-          <boxGeometry args={[entranceWidth, 5.2, 0.25]} />
-          <meshStandardMaterial color="#2d3748" metalness={0.45} roughness={0.38} />
-        </mesh>
-        {[-2.2, 0, 2.2].map((x) => (
-          <mesh key={x} position={[x, 0, 0.2]}>
-            <boxGeometry args={[1.8, 4.8, 0.08]} />
-            <meshStandardMaterial
-              color="#93c5fd"
-              transparent
-              opacity={0.45}
-              metalness={0.65}
-              roughness={0.08}
-              envMapIntensity={1.4}
-            />
-          </mesh>
-        ))}
-        <mesh position={[0, -2.2, 0.5]}>
-          <boxGeometry args={[entranceWidth + 0.4, 0.35, 1.2]} />
-          <meshStandardMaterial color="#6a6560" roughness={0.85} />
-        </mesh>
-      </group>
-
-      <mesh position={[0, 0.12, frontZ + 2.5]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        <planeGeometry args={[entranceWidth + 2, 3]} />
-        <meshStandardMaterial color="#c8c4bc" roughness={0.88} />
-      </mesh>
+      <RecessedEntrance />
 
       <WallSegment
         position={[-(doorHalf + leftWallWidth / 2), wallHeight / 2, centerZ]}

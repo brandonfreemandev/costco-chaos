@@ -1,14 +1,9 @@
-import { CART_HALF_X, CART_HALF_Z } from './staticObstacles';
+import { CART_HALF_X, CART_HALF_Z, getNpcHalfExtents } from './staticObstacles';
 import { getActiveNpcRuntimes } from './npcRegistry';
 import { tryNpcProximityBump } from './handleCollision';
 
 /** How far past “touching” we still count a bump (manual separation keeps hulls ~0.05 apart). */
 const TOUCH_SLACK = 0.38;
-
-function npcHalfExtents(cartLoad: number): { hx: number; hz: number } {
-  const hasCart = cartLoad > 1.2;
-  return { hx: hasCart ? 0.72 : 0.42, hz: hasCart ? 1.35 : 0.42 };
-}
 
 /** <= 0 means overlapping; small positive = separated by less than slack. */
 export function npcSeparationGap(
@@ -25,7 +20,7 @@ export function npcSeparationGap(
 }
 
 export function isNpcTouching(px: number, pz: number, nx: number, nz: number, cartLoad: number): boolean {
-  const { hx, hz } = npcHalfExtents(cartLoad);
+  const { hx, hz } = getNpcHalfExtents(cartLoad);
   return npcSeparationGap(px, pz, nx, nz, hx, hz) <= TOUCH_SLACK;
 }
 
