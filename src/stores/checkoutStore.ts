@@ -19,6 +19,7 @@ import {
 import { useGameStore } from './gameStore';
 import { usePlayerStore } from './playerStore';
 import { useUIStore } from './uiStore';
+import { useCartTransformStore } from './cartTransformStore';
 
 export interface SimCheckoutLane {
   id: string;
@@ -49,6 +50,7 @@ interface CheckoutStore {
   /** 0→1 advance animation per lane; 1 = fully advanced, reset to 0 on each queue pop */
   laneAdvanceAnim: Record<string, number>;
   initLanes: () => void;
+  snapCartToAssignedLane: () => void;
   tick: (dt: number, px: number, pz: number) => void;
   switchToLane: (laneId: string) => void;
   reset: () => void;
@@ -229,6 +231,15 @@ export const useCheckoutStore = create<CheckoutStore>((set, get) => ({
     });
   },
 
+  snapCartToAssignedLane: () => {
+    const { playerLaneId } = get();
+    if (!playerLaneId) return;
+    const idx = CHECKOUT_LANE_IDS.indexOf(playerLaneId as typeof CHECKOUT_LANE_IDS[number]);
+    if (idx === -1) return;
+    const { position, yaw } = useCartTransformStore.getState();
+    useCartTransformStore.getState().requestTeleport(CHECKOUT_LANE_X[idx], position.z, yaw);
+  },
+
   switchToLane: (laneId) => {
     const state = get();
     if (state.switchCooldown > 0 || state.beingServed) return;
@@ -274,6 +285,17 @@ export const useCheckoutStore = create<CheckoutStore>((set, get) => ({
     }
 
     applyCheckoutDamage(damage, message, regret > 2 || baited ? 0.85 : 0.55);
+
+    // Snap the cart to the target lane's X so the physical position matches the sim
+    const targetLaneIdx = CHECKOUT_LANE_IDS.indexOf(laneId as typeof CHECKOUT_LANE_IDS[number]);
+    if (targetLaneIdx !== -1) {
+      const { position, yaw } = useCartTransformStore.getState();
+      useCartTransformStore.getState().requestTeleport(
+        CHECKOUT_LANE_X[targetLaneIdx],
+        position.z,
+        yaw,
+      );
+    }
 
     set({
       lanes,

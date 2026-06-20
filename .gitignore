@@ -27,3 +27,9 @@ playtest-log.md
 # Env
 .env
 .env.*
+
+# API proxy files with live key — deploy manually, never commit
+api/chat.php
+api/ollama-key.local.php
+public/ollama-proxy.php
+public/ollama-key.local.php

@@ -68,9 +68,17 @@ function watchdogLogger(): Plugin {
 }
 
 export default defineConfig({
+  base: '/costco-chaos/',
   plugins: [react(), watchdogLogger()],
   server: {
     port: 5173,
     strictPort: true,
+    proxy: {
+      // Forward /api/* to the Node dev proxy (scripts/dev-proxy.js)
+      '/api': {
+        target: 'http://localhost:8081',
+        changeOrigin: true,
+      },
+    },
   },
 });

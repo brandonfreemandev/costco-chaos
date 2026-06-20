@@ -48,6 +48,7 @@ export function getCartInput(): CartInput {
 export function useCartInput(): void {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
       if (event.code === 'KeyE') {
         interactLatch = true;
         return;

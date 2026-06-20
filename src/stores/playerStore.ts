@@ -13,6 +13,7 @@ interface PlayerStore extends PlayerState {
   setCartPhysics: (cartPhysics: Partial<CartPhysics>) => void;
   setZone: (zone: StoreZone) => void;
   collectItem: (itemId: string) => void;
+  addShoppingItem: (item: ShoppingListItem) => void;
   reset: () => void;
 }
 
@@ -131,6 +132,19 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
       };
     });
   },
+
+  addShoppingItem: (item) =>
+    set((state) => {
+      if (state.inventory.items.some((i) => i.id === item.id)) return state;
+      const items = [...state.inventory.items, item];
+      return {
+        inventory: {
+          ...state.inventory,
+          items,
+          itemsRemaining: items.filter((i) => !i.collected).length,
+        },
+      };
+    }),
 
   reset: () => set({ ...initialState, inventory: buildInventory() }),
 }));

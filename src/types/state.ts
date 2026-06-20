@@ -6,7 +6,7 @@ export type NPCArchetype = 'BLOCKER' | 'AGGRESSOR' | 'SAMPLE_HUNTER';
 
 export type NPCBehaviorState = 'WANDERING' | 'TARGETING_SAMPLE' | 'IN_LINE';
 
-export type ShoppingCategory = 'meat' | 'bakery' | 'electronics' | 'bulkPaper';
+export type ShoppingCategory = 'meat' | 'bakery' | 'electronics' | 'bulkPaper' | 'bonus';
 
 export interface ShoppingListItem {
   id: string;

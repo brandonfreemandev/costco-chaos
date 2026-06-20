@@ -50,6 +50,8 @@ export interface NavAgentTickInput {
   selfId: string;
   patrolAxis: NpcPatrolAxis;
   getSwarmTarget: (id: string) => { x: number; z: number } | null;
+  playerX: number;
+  playerZ: number;
 }
 
 export interface NavAgentTickResult {

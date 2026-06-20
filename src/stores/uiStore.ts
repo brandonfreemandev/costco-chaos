@@ -30,14 +30,32 @@ export const useUIStore = create<UIStore>((set) => ({
   lastDamageAmount: 0,
 
   triggerBumpFeedback: (damage) => {
+    const d = damage.toFixed(0);
     const messages = [
-      `Shopper collision — mental health −${damage.toFixed(0)}`,
-      `They saw your cart coming. Mental health −${damage.toFixed(0)}`,
-      `Cart karma strikes. Mental health −${damage.toFixed(0)}`,
-      `Executive member energy? Mental health −${damage.toFixed(0)}`,
-      `Sample lady judges you. Mental health −${damage.toFixed(0)}`,
-      `Bulk shopper detected. Mental health −${damage.toFixed(0)}`,
-      `Your cart has opinions. Mental health −${damage.toFixed(0)}`,
+      `Shopper collision — mental health −${d}`,
+      `They saw your cart coming. Mental health −${d}`,
+      `Cart karma strikes. Mental health −${d}`,
+      `Executive member energy? Mental health −${d}`,
+      `Sample lady judges you. Mental health −${d}`,
+      `Bulk shopper detected. Mental health −${d}`,
+      `Your cart has opinions. Mental health −${d}`,
+      `You grazed a 48-pack of paper towels. Mental health −${d}`,
+      `A retiree with infinite time blocks your path. Mental health −${d}`,
+      `That was someone's grandma. Mental health −${d}`,
+      `Their cart was full of regret AND rotisserie chicken. Mental health −${d}`,
+      `You became the person everyone hates at Costco. Mental health −${d}`,
+      `The Kirkland brand witnessed this. Mental health −${d}`,
+      `Three people stopped to watch. Mental health −${d}`,
+      `You apologized to the cart. Mental health −${d}`,
+      `The PA system noticed. Mental health −${d}`,
+      `Cart-on-cart violence in aisle 7. Mental health −${d}`,
+      `Your executive membership does not protect you here. Mental health −${d}`,
+      `A child pointed. A parent sighed. Mental health −${d}`,
+      `Somebody's $1.50 hot dog was in there. Mental health −${d}`,
+      `They were just trying to get to the samples. Mental health −${d}`,
+      `Absolutely destroyed a display of 36-packs. Mental health −${d}`,
+      `Your cart apologizes. You don't. Mental health −${d}`,
+      `The free sample station is now a crime scene. Mental health −${d}`,
     ];
     const message = messages[Math.floor(Math.random() * messages.length)];
     set({

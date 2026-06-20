@@ -102,6 +102,7 @@ export function NPC({ config }: NPCProps) {
     const body = bodyRef.current;
     const agent = agentRef.current;
     if (!body || !agent) return;
+    if (useGameStore.getState().showPhoneInterlude) return;
 
     const position = body.translation();
     const phase = useGameStore.getState().phase;
@@ -145,6 +146,8 @@ export function NPC({ config }: NPCProps) {
       selfId: config.id,
       patrolAxis,
       getSwarmTarget: (id) => useSampleStationStore.getState().getSwarmTarget(id),
+      playerX: useCartTransformStore.getState().position.x,
+      playerZ: useCartTransformStore.getState().position.z,
     });
 
     body.setTranslation({ x: result.x, y: NPC_BODY_CENTER_Y, z: result.z }, true);

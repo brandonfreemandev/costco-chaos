@@ -2,6 +2,11 @@ export const BASE_MASS = 40;
 export const MAX_SPEED = 4.5;
 export const ACCEL = 14;
 export const REVERSE_ACCEL = 9;
+/** Rolling resistance — low so a loaded cart coasts. */
+export const FORWARD_DAMPING = 1.4;
+/** Lateral tire friction — high so sideways velocity bleeds off quickly but not instantly. */
+export const LATERAL_DAMPING = 7.0;
+/** @deprecated use FORWARD_DAMPING / LATERAL_DAMPING */
 export const LINEAR_DAMPING = 3.2;
 export const ANGULAR_DAMPING = 4;
 export const TURN_RATE = 2.2;

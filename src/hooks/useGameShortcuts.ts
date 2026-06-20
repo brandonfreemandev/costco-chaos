@@ -13,15 +13,17 @@ import { useUIStore } from '../stores/uiStore';
 import { useChaosTestStore } from '../stores/chaosTestStore';
 import { resetChaosMonitorTracking } from '../systems/chaosMonitor';
 
-/** Dev shortcuts: I = skip parking, O = skip checkout, T = watchdog, H = walk graph overlay. */
+/** Dev shortcuts: I = skip parking, O = skip checkout, P = phone interlude, T = watchdog, H = walk graph overlay. */
 export function useGameShortcuts(): void {
   const phase = useGameStore((s) => s.phase);
   const secureParkingSpot = useGameStore((s) => s.secureParkingSpot);
   const skipToCheckout = useGameStore((s) => s.skipToCheckout);
+  const triggerPhoneInterlude = useGameStore((s) => s.triggerPhoneInterlude);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.repeat) return;
+      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
 
       if (event.code === 'KeyI' && phase === 'PARKING') {
         event.preventDefault();
@@ -55,6 +57,12 @@ export function useGameShortcuts(): void {
         return;
       }
 
+      if (event.code === 'KeyP' && (phase === 'SHOPPING' || phase === 'CHECKOUT')) {
+        event.preventDefault();
+        triggerPhoneInterlude();
+        return;
+      }
+
       if (import.meta.env.DEV && event.code === 'KeyH') {
         event.preventDefault();
         useUIStore.getState().toggleWalkGraph();
@@ -79,5 +87,5 @@ export function useGameShortcuts(): void {
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [phase, secureParkingSpot, skipToCheckout]);
+  }, [phase, secureParkingSpot, skipToCheckout, triggerPhoneInterlude]);
 }

@@ -32,6 +32,8 @@ import {
 
 const ARRIVE = 0.3;
 const ORBIT_RING_RADIUS = 2.35;
+/** AGGRESSOR starts chasing the player within this many metres. */
+const AGGRESSOR_DETECT_RANGE = 9;
 const ORBIT_ANGULAR_SPEED = 0.65;
 /** Distance to a live kiosk at which a hunter switches from approach to orbit.
  *  The nearest graph nodes flanking a kiosk sit ~5.5m out, so this must clear that. */
@@ -158,10 +160,11 @@ export class GraphNavAgent {
     return Math.hypot(x - oldest.x, z - oldest.z);
   }
 
-  private travelSpeed(): number {
+  private travelSpeed(chasing = false): number {
     const a = this.config.archetype;
-    const boost = a === 'AGGRESSOR' ? 1.18 : a === 'SAMPLE_HUNTER' ? 0.95 : 1;
-    return this.config.baseSpeed * boost;
+    if (a === 'AGGRESSOR') return this.config.baseSpeed * (chasing ? 1.55 : 1.18);
+    if (a === 'SAMPLE_HUNTER') return this.config.baseSpeed * 0.95;
+    return this.config.baseSpeed;
   }
 
   private result(
@@ -193,9 +196,17 @@ export class GraphNavAgent {
 
   tick(input: NavAgentTickInput): NavAgentTickResult {
     const net = this.recordDisplacement(input.x, input.z, input.now);
+    const a = this.config.archetype;
+
+    // AGGRESSOR: chase player when within detection range
+    if (a === 'AGGRESSOR' && input.warehouseNpc) {
+      const distToPlayer = Math.hypot(input.x - input.playerX, input.z - input.playerZ);
+      if (distToPlayer < AGGRESSOR_DETECT_RANGE) {
+        return this.tickChasePlayer(input, net);
+      }
+    }
 
     const swarm = input.warehouseNpc ? input.getSwarmTarget(this.config.id) : null;
-    const a = this.config.archetype;
     const wantsSample =
       !!swarm && (a === 'SAMPLE_HUNTER' || this.config.obsessiveness > 55);
 
@@ -237,8 +248,12 @@ export class GraphNavAgent {
       this.prevId = this.currentId;
       this.currentId = this.targetId;
       this.targetId = null;
-      if (this.rng() < 0.16 * (0.5 + this.chaos)) {
-        this.pauseUntil = input.now + 250 + this.rng() * 900 * this.chaos;
+      const isBlocker = this.config.archetype === 'BLOCKER';
+      const pauseChance = isBlocker ? 0.55 : 0.16 * (0.5 + this.chaos);
+      const pauseMin = isBlocker ? 1800 : 250;
+      const pauseRange = isBlocker ? 3200 : 900 * this.chaos;
+      if (this.rng() < pauseChance) {
+        this.pauseUntil = input.now + pauseMin + this.rng() * pauseRange;
       }
       const yaw =
         Math.abs(dx) > 1e-4 || Math.abs(dz) > 1e-4 ? travelYawFromDirection(dx, dz) : null;
@@ -312,6 +327,52 @@ export class GraphNavAgent {
     this.anchoredTarget = null;
     const home = this.node(this.currentId);
     return home ? { x: home.x, z: home.z } : { x, z };
+  }
+
+  /**
+   * AGGRESSOR: walk the graph greedily toward the player.
+   * When the graph offers no closer node (player is between nodes), walk directly.
+   */
+  private tickChasePlayer(input: NavAgentTickInput, net: number): NavAgentTickResult {
+    const { x, z } = input;
+    const tx = input.playerX;
+    const tz = input.playerZ;
+
+    // Pick/maintain a graph node toward the player
+    if (!this.targetId) {
+      this.targetId = this.greedyTarget(tx, tz);
+    }
+    if (this.targetId) {
+      const cur = this.node(this.targetId);
+      if (cur && Math.hypot(cur.x - x, cur.z - z) <= ARRIVE) {
+        this.prevId = this.currentId;
+        this.currentId = this.targetId;
+        this.targetId = null;
+        this.targetId = this.greedyTarget(tx, tz);
+      }
+    }
+
+    const target = this.targetId ? this.node(this.targetId) : null;
+    const dx = (target?.x ?? tx) - x;
+    const dz = (target?.z ?? tz) - z;
+    const dist = Math.hypot(dx, dz);
+    if (dist < 0.05) {
+      return this.result(x, z, 0, null, true, 'Yield', this.targetId, net);
+    }
+    const speed = this.travelSpeed(true);
+    const step = speed * input.dt;
+    const inv = 1 / dist;
+    const moved = this.slideMove(x, z, dx * inv * step, dz * inv * step);
+    return this.result(
+      moved.x,
+      moved.z,
+      speed,
+      travelYawFromDirection(dx, dz),
+      false,
+      'Patrol',
+      this.targetId,
+      net,
+    );
   }
 
   private tickSwarm(

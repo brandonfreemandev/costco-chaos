@@ -12,6 +12,7 @@ export function useCheckoutInput(): void {
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.repeat) return;
+      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
       const idx = CHECKOUT_LANE_IDS.indexOf(event.key as (typeof CHECKOUT_LANE_IDS)[number]);
       if (idx === -1) return;
       event.preventDefault();

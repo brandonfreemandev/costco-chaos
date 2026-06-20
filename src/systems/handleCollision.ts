@@ -31,6 +31,7 @@ export function handleNpcCollision(
 
   usePlayerStore.getState().damageMentalHealth(damage);
   useUIStore.getState().triggerBumpFeedback(damage);
+  useGameStore.setState((s) => ({ bumpCount: s.bumpCount + 1 }));
 
   if (useGameStore.getState().audioUnlocked) {
     spatialAudio.playCartSlam(impactForce);

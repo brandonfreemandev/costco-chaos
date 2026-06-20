@@ -1,0 +1,28 @@
+# costco-chaos/api/ — lives in htdocs/costco-chaos/api/ and does not affect site root.
+
+# Block direct HTTP access to the API key file.
+<FilesMatch "^ollama-key\.local\.php$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order deny,allow
+    Deny from all
+  </IfModule>
+</FilesMatch>
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # Apache often strips Authorization before PHP — preserve for chat.php.
+  RewriteCond %{HTTP:Authorization} .
+  RewriteRule ^ - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+  # InfinityFree / reverse-proxy: honor X-Forwarded-Proto when present.
+  RewriteCond %{HTTPS} !=on
+  RewriteCond %{HTTP:X-Forwarded-Proto} !https [NC]
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+  # Ollama cloud relay — /costco-chaos/api/ollama-api/… → chat.php?path=…
+  RewriteRule ^ollama-api/?(.*)$ chat.php?path=$1 [L,QSA]
+</IfModule>

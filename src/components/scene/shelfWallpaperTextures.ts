@@ -70,6 +70,61 @@ function drawSeasonalTag(ctx: CanvasRenderingContext2D, bx: number, by: number, 
   ctx.fillText('DEAL', bx + bw * 0.06, by + bh * 0.2);
 }
 
+const SKU_LABELS: Record<CenterRackDept, string[]> = {
+  electronics: [
+    'TV 85" 4K\n$1,299.99', 'HDMI 48-Pack\n$34.99', 'Laptop Sleeve\n(No Laptop)\n$49.99',
+    'Smart Speaker\nListening\n$79.99', 'Charging Cable\n6-Pack\n$22.99', 'Webcam\nJudging You\n$89.99',
+    'Bluetooth\nEarbuds 3-Pack\n$129.99', 'Surge Protector\n12-Outlet\n$39.99',
+  ],
+  seasonal: [
+    'Inflatable\nSanta 9ft\n$89.99', 'Emergency\nXmas Lights\n$24.99', 'Patio Set\n(Wrong Season)\n$499.99',
+    'Leaf Blower\n(Good Luck)\n$149.99', 'Pool Float\nNov–Jan\n$19.99', 'Fire Pit\nAssembly\nRequired\n$229.99',
+    'Garden Hose\n150ft\n$59.99', 'Umbrella\n11ft\n$179.99',
+  ],
+  grocery: [
+    'Kirkland\nOlive Oil\n2.4L\n$19.99', 'Pretzel Crisps\n3.5 lb\n$8.99', 'Mixed Nuts\n40 oz\n$18.99',
+    'Sparkling\nWater 48-Pack\n$22.99', 'Granola Bars\n64-Count\n$14.99', 'Kirkland\nCoffee\n3 lb\n$22.99',
+    'Mac & Cheese\n18-Pack\n$12.99', 'Pasta Sauce\n6-Jars\n$11.99', 'Protein Bars\n30-Count\n$28.99',
+  ],
+  household: [
+    'Dish Soap\n4-Pack\n$12.99', 'Laundry Pods\n152-Count\n$24.99', 'Paper Towels\n12 Mega\n$22.99',
+    'Trash Bags\n200-Count\n$19.99', 'Ziploc Bags\nEvery Size\n$18.99', 'Spray Cleaner\n3-Pack\n$13.99',
+    'Sponges\n24-Count\n$9.99', 'Aluminum Foil\n1,000 sq ft\n$24.99',
+  ],
+  bulkPaper: [
+    'Kirkland\nBath Tissue\n30 Rolls\n$24.99', 'Paper Plates\n500-Count\n$19.99',
+    'Napkins\n1,000-Count\n$16.99', 'Facial Tissue\n12 Boxes\n$18.99',
+    'Kirkland\nPaper Towels\n160 Sheets\n$22.99', 'Parchment\nPaper 205ft\n$12.99',
+  ],
+};
+
+function drawSkuLabel(
+  ctx: CanvasRenderingContext2D,
+  bx: number, by: number, bw: number, bh: number,
+  dept: CenterRackDept, row: number, col: number,
+) {
+  const labels = SKU_LABELS[dept];
+  const label = labels[(row * 7 + col * 3) % labels.length];
+  const lines = label.split('\n');
+
+  const fontSize = Math.max(6, Math.floor(bw / 7));
+  ctx.font = `bold ${fontSize}px sans-serif`;
+  ctx.textAlign = 'center';
+
+  const lineH = fontSize * 1.25;
+  const totalH = lines.length * lineH;
+  let ty = by + (bh - totalH) / 2 + fontSize * 0.85;
+
+  for (let i = 0; i < lines.length; i++) {
+    const isPrice = lines[i].startsWith('$');
+    ctx.fillStyle = isPrice ? '#c00' : 'rgba(0,0,0,0.82)';
+    if (isPrice) ctx.font = `bold ${fontSize + 1}px sans-serif`;
+    else ctx.font = `${i === 0 ? 'bold' : 'normal'} ${fontSize}px sans-serif`;
+    ctx.fillText(lines[i], bx + bw / 2, ty + i * lineH);
+  }
+  ctx.textAlign = 'left';
+}
+
 function createDeptTexture(dept: CenterRackDept): THREE.CanvasTexture {
   const { bg, shelf, colors, gloss, kirkland, seasonal } = PALETTES[dept];
   const size = 256;
@@ -129,6 +184,12 @@ function createDeptTexture(dept: CenterRackDept): THREE.CanvasTexture {
         ctx.fillStyle = 'rgba(255,255,255,0.5)';
         ctx.fillRect(bx + bw * 0.15, by + bh * 0.1, bw * 0.35, bh * 0.75);
       }
+
+      // White label strip at bottom of each cell
+      const labelH = Math.max(10, bh * 0.32);
+      ctx.fillStyle = 'rgba(255,255,255,0.88)';
+      ctx.fillRect(bx, by + bh - labelH, bw, labelH);
+      drawSkuLabel(ctx, bx, by + bh - labelH, bw, labelH, dept, row, col);
     }
   }
 

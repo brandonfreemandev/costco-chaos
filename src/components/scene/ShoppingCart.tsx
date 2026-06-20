@@ -14,8 +14,9 @@ import { COLLISION_GROUP } from '../../types/state';
 import {
   ACCEL,
   BASE_MASS,
+  FORWARD_DAMPING,
+  LATERAL_DAMPING,
   getCartMass,
-  LINEAR_DAMPING,
   MAX_SPEED,
   REVERSE_ACCEL,
   TURN_RATE,
@@ -94,6 +95,7 @@ export function ShoppingCart() {
   useFrame((_, delta) => {
     const game = useGameStore.getState();
     if (game.phase !== 'PARKING' && game.phase !== 'SHOPPING' && game.phase !== 'CHECKOUT') return;
+    if (game.showPhoneInterlude) return;
 
     const teleport = useCartTransformStore.getState().takeTeleport();
     if (teleport) {
@@ -123,9 +125,15 @@ export function ShoppingCart() {
       vz -= forwardZ * REVERSE_ACCEL * massFactor * dt;
     }
 
-    const damping = Math.exp(-LINEAR_DAMPING * dt);
-    vx *= damping;
-    vz *= damping;
+    // Decompose into forward and lateral components and damp them independently.
+    // Heavy cart (low massFactor) has less forward damping — more momentum, harder to stop.
+    const fwdProj = forwardX * vx + forwardZ * vz; // signed magnitude along forward axis
+    const latX = vx - forwardX * fwdProj;           // lateral (sideways) component
+    const latZ = vz - forwardZ * fwdProj;
+    const fwdDamp = Math.exp(-FORWARD_DAMPING * massFactor * dt);
+    const latDamp = Math.exp(-LATERAL_DAMPING * dt);
+    vx = forwardX * fwdProj * fwdDamp + latX * latDamp;
+    vz = forwardZ * fwdProj * fwdDamp + latZ * latDamp;
 
     const speed = Math.hypot(vx, vz);
     if (speed > MAX_SPEED) {
@@ -135,7 +143,9 @@ export function ShoppingCart() {
     }
 
     if (input.steer !== 0) {
-      const turnFactor = speed > 0.05 ? Math.max(0.35, speed / MAX_SPEED) : 0.55;
+      // Harder to turn at speed — a loaded cart doesn't pivot on a dime.
+      const speedRatio = speed / MAX_SPEED;
+      const turnFactor = speed > 0.05 ? Math.max(0.28, 1 - speedRatio * 0.62) : 0.6;
       yawRef.current -= input.steer * TURN_RATE * turnFactor * dt;
     }
 

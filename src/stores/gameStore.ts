@@ -12,6 +12,9 @@ interface GameStore {
   checkoutWon: boolean;
   parkingSpotSecured: boolean;
   shoppingListComplete: boolean;
+  bumpCount: number;
+  showPhoneInterlude: boolean;
+  bonusItems: string[];
   setPhase: (phase: GamePhase) => void;
   unlockAudio: () => void;
   triggerNervousBreakdown: () => void;
@@ -19,6 +22,9 @@ interface GameStore {
   markShoppingComplete: () => void;
   beginCheckout: () => void;
   skipToCheckout: () => void;
+  triggerPhoneInterlude: () => void;
+  dismissPhoneInterlude: () => void;
+  addBonusItem: (item: string) => void;
   reset: () => void;
 }
 
@@ -33,6 +39,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
   checkoutWon: false,
   parkingSpotSecured: false,
   shoppingListComplete: false,
+  bumpCount: 0,
+  showPhoneInterlude: false,
+  bonusItems: [],
 
   setPhase: (phase) => {
     const prev = get().phase;
@@ -80,6 +89,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     useCheckoutStore.getState().initLanes();
     set({ phase: 'CHECKOUT' });
     usePlayerStore.getState().setZone('CHECKOUT');
+    useCheckoutStore.getState().snapCartToAssignedLane();
   },
 
   skipToCheckout: () => {
@@ -96,7 +106,33 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ shoppingListComplete: true, checkoutWon: false, phase: 'CHECKOUT' });
     useCheckoutStore.getState().initLanes();
     usePlayerStore.getState().setZone('CHECKOUT');
+    useCheckoutStore.getState().snapCartToAssignedLane();
     logTransition('Dev shortcut — skipped shopping to checkout (test queue)');
+  },
+
+  triggerPhoneInterlude: () => {
+    if (get().showPhoneInterlude) return;
+    logTransition('Phone interlude triggered');
+    set({ showPhoneInterlude: true });
+  },
+
+  dismissPhoneInterlude: () => set({ showPhoneInterlude: false }),
+
+  addBonusItem: (item) => {
+    const s = get();
+    if (s.bonusItems.includes(item)) return;
+    set({ bonusItems: [...s.bonusItems, item] });
+    const slug = item.toLowerCase().replace(/\s+/g, '-');
+    usePlayerStore.getState().addShoppingItem({
+      id: `bonus-${slug}`,
+      sku: `SPX-${Math.floor(Math.random() * 90000) + 10000}`,
+      name: item,
+      aisle: 'Babe\'s Request',
+      category: 'bonus',
+      collected: true,
+      worldPosition: { x: 0, y: 0, z: 0 },
+      productColor: '#a78bfa',
+    });
   },
 
   reset: () => {
@@ -110,6 +146,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
       checkoutWon: false,
       parkingSpotSecured: false,
       shoppingListComplete: false,
+      bumpCount: 0,
+      showPhoneInterlude: false,
+      bonusItems: [],
     });
   },
 }));
