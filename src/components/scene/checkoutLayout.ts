@@ -40,13 +40,14 @@ export const CHECKOUT_FACADE_Z = CHECKOUT_BACK_WALL_Z - 0.32;
 /** Belt runs north toward exit wall; queue slots step south along the west side. */
 export const CHECKOUT_BELT_ORIGIN_Z = FRONT_COURT_MIN_Z + 0.35;
 export const CHECKOUT_BELT_LENGTH = CHECKOUT_BACK_WALL_Z - CHECKOUT_BELT_ORIGIN_Z - 0.55;
-export const LANE_QUEUE_FRONT_Z = CHECKOUT_BACK_WALL_Z - 1.35;
+/** Front of the line sits ~2m south of the cashier/register (room to unload). */
+export const LANE_QUEUE_FRONT_Z = CHECKOUT_BACK_WALL_Z - 2.8;
 export const LANE_QUEUE_BACK_Z = CHECKOUT_MEZZANINE.minZ + 0.6;
 /** @deprecated alias */
 export const LANE_BELT_Z = CHECKOUT_BACK_WALL_Z - 0.72;
 /** @deprecated alias */
 export const LANE_REGISTER_Z = LANE_BELT_Z;
-export const QUEUE_SLOT_SPACING = 1.45;
+export const QUEUE_SLOT_SPACING = 1.9;
 export const MAX_VISIBLE_QUEUE = 4;
 
 export function queueSlotZ(slotsFromFront: number): number {

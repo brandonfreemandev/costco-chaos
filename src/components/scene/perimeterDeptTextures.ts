@@ -10,7 +10,11 @@ export type PerimeterDeptKey =
   | 'photo'
   | 'optical';
 
-const cache = new Map<PerimeterDeptKey, THREE.CanvasTexture>();
+/** Cache by key + label — one key (e.g. 'produce') backs several labels (PRODUCE / FLORAL). */
+const cache = new Map<string, THREE.CanvasTexture>();
+
+/** Supersample so the baked header text stays crisp on large facades. */
+const SCALE = 2;
 
 function finish(tex: THREE.CanvasTexture): THREE.CanvasTexture {
   tex.wrapS = THREE.ClampToEdgeWrapping;
@@ -20,30 +24,57 @@ function finish(tex: THREE.CanvasTexture): THREE.CanvasTexture {
   return tex;
 }
 
-/** Refrigerated case — packages behind glass, department-colored header band. */
+function makeCanvas(w: number, h: number): { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D } {
+  const canvas = document.createElement('canvas');
+  canvas.width = w * SCALE;
+  canvas.height = h * SCALE;
+  const ctx = canvas.getContext('2d')!;
+  ctx.scale(SCALE, SCALE);
+  return { canvas, ctx };
+}
+
+/** Baked department title — white, bold, auto-shrunk to fit the header band. */
+function drawHeaderLabel(ctx: CanvasRenderingContext2D, w: number, headerH: number, label: string): void {
+  ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  let fontSize = Math.round(headerH * 0.62);
+  ctx.font = `bold ${fontSize}px system-ui, sans-serif`;
+  const maxW = w - 18;
+  while (ctx.measureText(label).width > maxW && fontSize > 9) {
+    fontSize -= 1;
+    ctx.font = `bold ${fontSize}px system-ui, sans-serif`;
+  }
+  ctx.fillText(label, w / 2, headerH / 2 + 1);
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+}
+
+/** Refrigerated case — packages behind glass, department-colored header band with baked title. */
 function coolerTexture(
   bg: string,
   band: string,
   packages: string[],
   cols: number,
   rows: number,
+  label: string,
 ): THREE.CanvasTexture {
   const w = 256;
   const h = 192;
-  const canvas = document.createElement('canvas');
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext('2d')!;
+  const { canvas, ctx } = makeCanvas(w, h);
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, w, h);
 
+  const headerH = 34;
   ctx.fillStyle = band;
-  ctx.fillRect(0, 0, w, 22);
+  ctx.fillRect(0, 0, w, headerH);
+  drawHeaderLabel(ctx, w, headerH, label);
 
+  const top = headerH + 6;
   const shelfRows = rows;
-  const bandH = (h - 28) / shelfRows;
+  const bandH = (h - top - 6) / shelfRows;
   for (let row = 0; row < shelfRows; row++) {
-    const y0 = 26 + row * bandH;
+    const y0 = top + row * bandH;
     ctx.fillStyle = '#94a3b8';
     ctx.fillRect(0, y0 + bandH - 4, w, 3);
 
@@ -58,28 +89,23 @@ function coolerTexture(
   }
 
   ctx.fillStyle = 'rgba(200,230,255,0.18)';
-  ctx.fillRect(0, 22, w, h - 22);
+  ctx.fillRect(0, headerH, w, h - headerH);
 
   return finish(new THREE.CanvasTexture(canvas));
 }
 
-function serviceWallTexture(bg: string, accent: string, icon: string): THREE.CanvasTexture {
+/** Service wall — baked title band over a grid of product cubbies. */
+function serviceWallTexture(bg: string, accent: string, label: string): THREE.CanvasTexture {
   const w = 256;
   const h = 192;
-  const canvas = document.createElement('canvas');
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext('2d')!;
+  const { canvas, ctx } = makeCanvas(w, h);
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, w, h);
 
+  const headerH = 36;
   ctx.fillStyle = accent;
-  ctx.fillRect(0, 0, w, 36);
-
-  ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 22px system-ui, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText(icon, w / 2, 26);
+  ctx.fillRect(0, 0, w, headerH);
+  drawHeaderLabel(ctx, w, headerH, label);
 
   for (let row = 0; row < 3; row++) {
     for (let col = 0; col < 3; col++) {
@@ -95,34 +121,35 @@ function serviceWallTexture(bg: string, accent: string, icon: string): THREE.Can
   return finish(new THREE.CanvasTexture(canvas));
 }
 
-function createTexture(key: PerimeterDeptKey): THREE.CanvasTexture {
+function createTexture(key: PerimeterDeptKey, label: string): THREE.CanvasTexture {
   switch (key) {
     case 'meat':
-      return coolerTexture('#eef2f7', '#b91c1c', ['#fecaca', '#fca5a5', '#f87171', '#dc2626', '#991b1b'], 5, 4);
+      return coolerTexture('#eef2f7', '#b91c1c', ['#fecaca', '#fca5a5', '#f87171', '#dc2626', '#991b1b'], 5, 4, label);
     case 'bakery':
-      return coolerTexture('#fef3c7', '#d97706', ['#fde68a', '#fcd34d', '#f59e0b', '#fef9c3', '#fff7ed'], 5, 3);
+      return coolerTexture('#fef3c7', '#d97706', ['#fde68a', '#fcd34d', '#f59e0b', '#fef9c3', '#fff7ed'], 5, 3, label);
     case 'produce':
-      return coolerTexture('#ecfdf5', '#15803d', ['#86efac', '#4ade80', '#fbbf24', '#ef4444', '#a3e635'], 6, 4);
+      return coolerTexture('#ecfdf5', '#15803d', ['#86efac', '#4ade80', '#fbbf24', '#ef4444', '#a3e635'], 6, 4, label);
     case 'dairy':
-      return coolerTexture('#f0f9ff', '#0284c7', ['#ffffff', '#e0f2fe', '#bae6fd', '#fef08a', '#ffffff'], 5, 5);
+      return coolerTexture('#f0f9ff', '#0284c7', ['#ffffff', '#e0f2fe', '#bae6fd', '#fef08a', '#ffffff'], 5, 5, label);
     case 'frozen':
-      return coolerTexture('#e0f2fe', '#0369a1', ['#ffffff', '#dbeafe', '#93c5fd', '#f0f9ff', '#bfdbfe'], 4, 5);
+      return coolerTexture('#e0f2fe', '#0369a1', ['#ffffff', '#dbeafe', '#93c5fd', '#f0f9ff', '#bfdbfe'], 4, 5, label);
     case 'pharmacy':
-      return serviceWallTexture('#f0fdf4', '#16a34a', 'PHARMACY');
+      return serviceWallTexture('#f0fdf4', '#16a34a', label);
     case 'photo':
-      return serviceWallTexture('#faf5ff', '#7c3aed', 'PHOTO CENTER');
+      return serviceWallTexture('#faf5ff', '#7c3aed', label);
     case 'optical':
-      return serviceWallTexture('#f8fafc', '#005dab', 'OPTICAL');
+      return serviceWallTexture('#f8fafc', '#005dab', label);
     default:
-      return coolerTexture('#f1f5f9', '#64748b', ['#cbd5e1'], 3, 3);
+      return coolerTexture('#f1f5f9', '#64748b', ['#cbd5e1'], 3, 3, label);
   }
 }
 
-export function getPerimeterDeptTexture(key: PerimeterDeptKey): THREE.CanvasTexture {
-  let tex = cache.get(key);
+export function getPerimeterDeptTexture(key: PerimeterDeptKey, label: string): THREE.CanvasTexture {
+  const cacheKey = `${key}|${label}`;
+  let tex = cache.get(cacheKey);
   if (!tex) {
-    tex = createTexture(key);
-    cache.set(key, tex);
+    tex = createTexture(key, label);
+    cache.set(cacheKey, tex);
   }
   return tex;
 }

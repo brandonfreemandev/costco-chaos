@@ -13,7 +13,7 @@ import { useUIStore } from '../stores/uiStore';
 import { useChaosTestStore } from '../stores/chaosTestStore';
 import { resetChaosMonitorTracking } from '../systems/chaosMonitor';
 
-/** Dev shortcuts: I = skip parking, O = skip checkout, T = layout watchdog on/off. */
+/** Dev shortcuts: I = skip parking, O = skip checkout, T = watchdog, H = walk graph overlay. */
 export function useGameShortcuts(): void {
   const phase = useGameStore((s) => s.phase);
   const secureParkingSpot = useGameStore((s) => s.secureParkingSpot);
@@ -52,6 +52,12 @@ export function useGameShortcuts(): void {
           lastCollisionMessage: `Dev skip — lane ${playerLaneId ?? '?'}, ${slotsFromFront} carts ahead.`,
         });
         console.log('[Shortcut] O — test checkout queue');
+        return;
+      }
+
+      if (import.meta.env.DEV && event.code === 'KeyH') {
+        event.preventDefault();
+        useUIStore.getState().toggleWalkGraph();
         return;
       }
 

@@ -2,6 +2,7 @@ import { useLayoutEffect, useMemo, useRef } from 'react';
 import { Text } from '@react-three/drei';
 import * as THREE from 'three';
 import { usePlayerStore } from '../../stores/playerStore';
+import { useUIStore } from '../../stores/uiStore';
 import { SAMPLE_KIOSKS } from '../../systems/sampleStations';
 import { generateWarehouseNPCs } from './CulledNPC';
 import { NpcCrowd } from './NpcCrowd';
@@ -12,7 +13,7 @@ import { WarehouseFloorGlow } from './WarehouseFloorGlow';
 import { CheckoutMezzanine } from './CheckoutMezzanine';
 import { PerimeterDepartments } from './PerimeterDepartments';
 import { ShelfWallpaper } from './ShelfWallpaper';
-import { DebugOverlay } from '../../world/DebugOverlay';
+import { WalkabilityGraphOverlay } from './WalkabilityGraphOverlay';
 import { QuestCollectibles } from './ShelfProducts';
 import { RackBulkProps, RackUprights } from './RackBulkProps';
 import {
@@ -23,6 +24,7 @@ import {
 import {
   AISLE_SPECS,
   buildRackVisualChunks,
+  buildRacetrackGapVisualChunks,
   CROSS_AISLES_Z,
   RACETRACK_LOOP,
   RACK_HEIGHT,
@@ -172,9 +174,10 @@ function AisleSigns() {
 }
 
 export function WarehouseAisles() {
+  const walkGraphVisible = useUIStore((s) => s.walkGraphVisible);
   const rackChunks = useMemo(() => {
     invalidateWarehouseObstacleCache();
-    return buildRackVisualChunks();
+    return [...buildRackVisualChunks(), ...buildRacetrackGapVisualChunks()];
   }, []);
   const npcs = useMemo(() => generateWarehouseNPCs(), []);
 
@@ -212,7 +215,7 @@ export function WarehouseAisles() {
         <SampleKiosk key={kiosk.id} kiosk={kiosk} />
       ))}
 
-      {import.meta.env.DEV && <DebugOverlay />}
+      {import.meta.env.DEV && walkGraphVisible && <WalkabilityGraphOverlay />}
 
       <NpcCrowd configs={npcs} alwaysActive />
     </group>

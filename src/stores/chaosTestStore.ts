@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { logWatchdogViolation, startWatchdogSession } from '../systems/watchdogLog';
 
 export interface ChaosViolation {
   id: string;
@@ -26,9 +27,17 @@ export const useChaosTestStore = create<ChaosTestStore>((set) => ({
   violations: [],
   lastCheckAt: 0,
 
-  setMonitor: (on) => set({ monitorOn: on }),
+  setMonitor: (on) => {
+    if (on) startWatchdogSession();
+    set({ monitorOn: on });
+  },
 
-  toggleMonitor: () => set((s) => ({ monitorOn: !s.monitorOn })),
+  toggleMonitor: () =>
+    set((s) => {
+      const next = !s.monitorOn;
+      if (next) startWatchdogSession();
+      return { monitorOn: next };
+    }),
 
   clearViolations: () => {
     recentKeys.clear();
@@ -46,5 +55,6 @@ export const useChaosTestStore = create<ChaosTestStore>((set) => ({
       violations: [entry, ...s.violations].slice(0, MAX_VIOLATIONS),
     }));
     console.warn(`[ChaosTest] ${v.kind}: ${v.message}`);
+    logWatchdogViolation(entry);
   },
 }));

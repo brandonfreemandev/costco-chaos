@@ -22,8 +22,10 @@ const FACE_SHOPPER: [number, number, number] = [0, Math.PI, 0];
 const STEEL = { color: '#374151', roughness: 0.35, metalness: 0.48 };
 const BELT = { color: '#1f2937', roughness: 0.55, metalness: 0.35 };
 
-/** Customer / cart side — west of belt (−X). Cashier faces +X from the west edge. */
+/** Customer / cart side — west of belt (−X). They unload eastward onto the belt. */
 const CUSTOMER_SIDE_X = -0.72;
+/** Cashier stands on the opposite (east, +X) side of the belt, facing the customers. */
+const CASHIER_SIDE_X = 0.8;
 const BELT_WIDTH = 0.72;
 
 function CheckoutLabel({
@@ -115,9 +117,10 @@ function LaneRegister({
         />
       </mesh>
 
-      {/* Cashier behind belt at north end, facing +X (right wall / cart lane) */}
-      <group position={[CUSTOMER_SIDE_X - 0.08, 0, northEndZ]}>
-        <CashierAvatar skinTone={clerk.skin} hairColor={clerk.hair} />
+      {/* Cashier on the east side of the belt at the north end, facing −X across the
+          belt toward the customers unloading on the west side. */}
+      <group position={[CASHIER_SIDE_X, 0, northEndZ]}>
+        <CashierAvatar skinTone={clerk.skin} hairColor={clerk.hair} rotationY={Math.PI / 2} />
       </group>
 
       {!isOpen && (

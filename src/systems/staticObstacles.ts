@@ -13,8 +13,6 @@ import {
   WH_MIN_X,
   WH_MIN_Z,
 } from '../components/scene/warehouseLayout';
-import { USE_MVP_WAREHOUSE } from '../mvp/mvpLayout';
-import { getMvpWarehouseObstacles } from '../mvp/mvpCollision';
 import { useCartTransformStore } from '../stores/cartTransformStore';
 import { useGameStore } from '../stores/gameStore';
 import type { GamePhase } from '../types/state';
@@ -103,7 +101,6 @@ export function invalidateParkingObstacleCache(): void {
 }
 
 export function getWarehouseObstacles(): Aabb[] {
-  if (USE_MVP_WAREHOUSE) return getMvpWarehouseObstacles();
   if (warehouseCache) return warehouseCache;
 
   const boxes: Aabb[] = [...buildRackCollisionObstacles()];

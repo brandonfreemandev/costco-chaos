@@ -1,4 +1,4 @@
-import { AISLE_SPECS, CROSS_AISLES_Z, isInsideRackFootprint, sanitizeWarehouseWaypoint, snapCrossAisleZ } from '../components/scene/warehouseLayout';
+import { AISLE_SPECS, CROSS_AISLES_Z, isInsideRackFootprint, rackRowGapCentersZ, sanitizeWarehouseWaypoint, snapCrossAisleZ } from '../components/scene/warehouseLayout';
 
 export interface SampleKioskSpec {
   id: string;
@@ -10,11 +10,13 @@ export interface SampleKioskSpec {
 /**
  * Cross-aisle sample counters — center drive lane or east side aisle, clear of rack rows.
  * sample-mid shares the bakery cross-aisle (z=0.5) but sits in the wide center aisle.
+ * sample-south uses east aisle z=-5.75 (not south racetrack z=-11.25) so the perimeter
+ * loop stays continuous — Build 3/4 south-racetrack-loop gate.
  */
 export const SAMPLE_KIOSKS: SampleKioskSpec[] = [
   { id: 'sample-north', x: 0, z: snapCrossAisleZ(CROSS_AISLES_Z[0]), sampleName: 'Pizza Pinwheel' },
   { id: 'sample-mid', x: 0, z: snapCrossAisleZ(CROSS_AISLES_Z[1]), sampleName: 'Mystery Protein Cube' },
-  { id: 'sample-south', x: AISLE_SPECS[2].x, z: snapCrossAisleZ(CROSS_AISLES_Z[2]), sampleName: 'Chicken Bite (Allegedly)' },
+  { id: 'sample-south', x: AISLE_SPECS[2].x, z: rackRowGapCentersZ()[1], sampleName: 'Chicken Bite (Allegedly)' },
 ];
 
 if (import.meta.env?.DEV) {

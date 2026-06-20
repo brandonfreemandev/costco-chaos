@@ -8,6 +8,7 @@ dist-ssr/
 # Logs
 *.log
 npm-debug.log*
+playtest-log.md
 
 # Editor
 .vscode/*

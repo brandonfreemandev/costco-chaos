@@ -246,6 +246,44 @@ export function buildRackVisualChunks(): RackVisualChunk[] {
   return chunks;
 }
 
+/**
+ * Visual-only steel strips closing the racetrack↔rack gap (west/east per row).
+ * Collision carve unchanged — fillers do not affect walkability parity count.
+ */
+export function buildRacetrackGapVisualChunks(): RackVisualChunk[] {
+  const fillers: RackVisualChunk[] = [];
+  const westFaceX = CENTER_MIN_X + RACETRACK_RACK_INSET;
+  const eastFaceX = CENTER_MAX_X - RACETRACK_RACK_INSET;
+  const westGapOuter = westPatrolCorridor().maxX;
+  const eastGapOuter = eastPatrolCorridor().minX;
+  const westW = westFaceX - westGapOuter;
+  const eastW = eastGapOuter - eastFaceX;
+  if (westW < 0.2 && eastW < 0.2) return fillers;
+
+  for (const seg of buildRackSegments()) {
+    const dept = departmentForRackSegment(seg);
+    const westBlock = (seg.x0 + seg.x1) / 2 < 0;
+    if (westBlock && westW >= 0.2) {
+      fillers.push({
+        x: (westGapOuter + westFaceX) / 2,
+        z: seg.z,
+        w: westW,
+        faceSide: seg.faceSide,
+        dept,
+      });
+    } else if (!westBlock && eastW >= 0.2) {
+      fillers.push({
+        x: (eastFaceX + eastGapOuter) / 2,
+        z: seg.z,
+        w: eastW,
+        faceSide: seg.faceSide,
+        dept,
+      });
+    }
+  }
+  return fillers;
+}
+
 /** Full column path clear for a cart hull (every step, not just endpoints). */
 export function isColumnPathWalkable(
   x: number,
@@ -559,6 +597,18 @@ export function sanitizeWarehouseWaypoint(x: number, y: number, z: number): [num
     }
   }
   return [px, y, bestZ];
+}
+
+/** Patrol waypoint — snaps X to aisle/racetrack; keeps explicit Z when clear of racks. */
+export function warehousePatrolWaypoint(x: number, y: number, z: number): [number, number, number] {
+  const clamped = clampWarehouseNpcPoint(x, z);
+  let px = nearestPatrolX(clamped.x);
+  px = Math.max(WAREHOUSE_NPC_BOUNDS.minX, Math.min(WAREHOUSE_NPC_BOUNDS.maxX, px));
+  const pz = Math.max(WAREHOUSE_NPC_BOUNDS.minZ, Math.min(WAREHOUSE_NPC_BOUNDS.maxZ, clamped.z));
+  if (!isInsideRackFootprint(px, pz, NPC_RACK_CLEARANCE)) {
+    return [px, y, pz];
+  }
+  return sanitizeWarehouseWaypoint(px, y, pz);
 }
 
 export function clampWarehouseWaypoint(x: number, y: number, z: number): [number, number, number] {

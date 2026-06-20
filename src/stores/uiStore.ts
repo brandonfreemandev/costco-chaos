@@ -4,6 +4,8 @@ interface UIStore {
   visionBlur: number;
   lastCollisionMessage: string | null;
   sidebarCollapsed: boolean;
+  /** DEV: walkability graph overlay — off until H pressed */
+  walkGraphVisible: boolean;
   bumpFlash: number;
   healFlash: number;
   damagePulse: number;
@@ -13,12 +15,14 @@ interface UIStore {
   clearCollisionMessage: () => void;
   toggleSidebar: () => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
+  toggleWalkGraph: () => void;
 }
 
 export const useUIStore = create<UIStore>((set) => ({
   visionBlur: 0,
   lastCollisionMessage: null,
   sidebarCollapsed: false,
+  walkGraphVisible: false,
   bumpFlash: 0,
   healFlash: 0,
   damagePulse: 0,
@@ -73,4 +77,11 @@ export const useUIStore = create<UIStore>((set) => ({
   toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
 
   setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
+
+  toggleWalkGraph: () =>
+    set((s) => {
+      const next = !s.walkGraphVisible;
+      console.log(`[Shortcut] H — walk graph overlay ${next ? 'ON' : 'OFF'}`);
+      return { walkGraphVisible: next };
+    }),
 }));

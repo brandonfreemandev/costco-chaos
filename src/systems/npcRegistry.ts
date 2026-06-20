@@ -1,3 +1,5 @@
+import type { NavAgentState } from './NavAgent';
+
 export type NpcPatrolAxis = 'column' | 'row' | 'free';
 
 export interface NpcCollisionMeta {
@@ -7,15 +9,22 @@ export interface NpcCollisionMeta {
   patrolAxis?: NpcPatrolAxis;
 }
 
+export interface NpcAgentTelemetry {
+  state: NavAgentState;
+  targetNodeId: string | null;
+  netDisplacement5s: number;
+  jitterScore: number;
+  blockedReason?: string;
+}
+
 export interface NpcRuntimeState {
   meta: NpcCollisionMeta;
   x: number;
   z: number;
   speed: number;
-  /** Intentional grid-patrol pause — watchdog ignores brief stops. */
   paused?: boolean;
-  /** Sliding against obstacles without net progress. */
   jittering?: boolean;
+  telemetry?: NpcAgentTelemetry;
 }
 
 const registry = new Map<number, NpcCollisionMeta>();
@@ -43,8 +52,9 @@ export function updateNpcRuntime(
   speed: number,
   paused = false,
   jittering = false,
+  telemetry?: NpcAgentTelemetry,
 ): void {
-  runtimes.set(handle, { meta, x, z, speed, paused, jittering });
+  runtimes.set(handle, { meta, x, z, speed, paused, jittering, telemetry });
 }
 
 export function getActiveNpcRuntimes(): NpcRuntimeState[] {

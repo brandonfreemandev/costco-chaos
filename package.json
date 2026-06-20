@@ -7,7 +7,10 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "validate:walkability": "npx tsx scripts/validate-walkability-graph.ts"
+    "validate:walkability": "npx tsx scripts/validate-walkability-graph.ts",
+    "validate:routes": "npx tsx scripts/validate-gates.ts",
+    "validate:gates": "npx tsx scripts/validate-gates.ts",
+    "launch:dev": "bash scripts/launch-dev.sh"
   },
   "dependencies": {
     "@react-three/drei": "^10.0.5",
@@ -20,6 +23,7 @@
     "zustand": "^5.0.3"
   },
   "devDependencies": {
+    "@types/node": "^22.10.0",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
     "@types/three": "^0.175.0",

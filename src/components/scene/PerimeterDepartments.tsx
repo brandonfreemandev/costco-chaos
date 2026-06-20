@@ -1,5 +1,4 @@
 import { useMemo } from 'react';
-import { Text } from '@react-three/drei';
 import * as THREE from 'three';
 import { WH_CEILING, WH_DEPTH, WH_MAX_X, WH_MAX_Z, WH_MIN_X, WH_MIN_Z, WH_WIDTH } from './warehouseLayout';
 import { getPerimeterDeptTexture, type PerimeterDeptKey } from './perimeterDeptTextures';
@@ -27,18 +26,15 @@ type DeptSpec = {
   protrude?: number;
 };
 
-/** Service facades bake the title into the canvas texture — no floating duplicate. */
-const TEXTURE_HAS_LABEL = new Set<PerimeterDeptKey>(['pharmacy', 'photo', 'optical']);
-
 function DeptPanel({ spec }: { spec: DeptSpec }) {
   const mat = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
-        map: getPerimeterDeptTexture(spec.key),
+        map: getPerimeterDeptTexture(spec.key, spec.label),
         roughness: 0.72,
         metalness: 0.06,
       }),
-    [spec.key],
+    [spec.key, spec.label],
   );
 
   const protrude = spec.protrude ?? 0;
@@ -51,29 +47,17 @@ function DeptPanel({ spec }: { spec: DeptSpec }) {
         <planeGeometry args={[spec.w, spec.h]} />
       </mesh>
 
-      {spec.cooler && (
-        <>
-          <mesh position={[0, 0, 0.12]}>
-            <planeGeometry args={[spec.w - 0.2, spec.h - 0.35]} />
+      {spec.cooler && (() => {
+        // Glass covers only the case below the baked header band, so the title stays clear.
+        const headerWorld = spec.h * (34 / 192);
+        const glassH = Math.max(0.5, spec.h - headerWorld - 0.25);
+        return (
+          <mesh position={[0, -headerWorld / 2 - 0.05, 0.12]}>
+            <planeGeometry args={[spec.w - 0.2, glassH]} />
             <meshStandardMaterial {...GLASS} />
           </mesh>
-          <mesh position={[0, spec.h / 2 - 0.28, 0.18]}>
-            <boxGeometry args={[spec.w - 0.15, 0.42, 0.06]} />
-            <meshStandardMaterial
-              color={spec.accent}
-              emissive={spec.accent}
-              emissiveIntensity={0.22}
-              roughness={0.4}
-            />
-          </mesh>
-        </>
-      )}
-
-      {!TEXTURE_HAS_LABEL.has(spec.key) && (
-        <Text position={[0, spec.h / 2 - 0.05, 0.22]} fontSize={0.34} color="#f8fafc" anchorX="center" anchorY="middle">
-          {spec.label}
-        </Text>
-      )}
+        );
+      })()}
     </group>
   );
 }
