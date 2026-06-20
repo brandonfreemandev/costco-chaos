@@ -1,33 +1,25 @@
 import * as THREE from 'three';
+import type { CenterRackDept } from './warehouseLayout';
 
-type DeptKey = 'bakery' | 'electronics' | 'bulkPaper' | 'sample' | 'frozen' | 'dairy' | 'grocery';
-
-/** Fixed palettes — bulk case packs, Kirkland cues, cooler-adjacent zones. */
+/**
+ * Center-court steel facings — Costco racetrack hardlines only.
+ * (Fresh/coolers use perimeterDeptTextures on wall facades.)
+ */
 const PALETTES: Record<
-  DeptKey,
-  { bg: string; shelf: string; colors: string[]; gloss?: boolean; kirkland?: boolean }
+  CenterRackDept,
+  { bg: string; shelf: string; colors: string[]; gloss?: boolean; kirkland?: boolean; seasonal?: boolean }
 > = {
-  frozen: {
-    bg: '#dbeafe',
-    shelf: '#64748b',
-    colors: ['#ffffff', '#f0f9ff', '#bfdbfe', '#93c5fd', '#e0f2fe'],
+  electronics: {
+    bg: '#c8ced6',
+    shelf: '#4b5563',
+    colors: ['#0f172a', '#1e293b', '#2563eb', '#111827', '#334155'],
     gloss: true,
   },
-  dairy: {
-    bg: '#f0f9ff',
-    shelf: '#64748b',
-    colors: ['#ffffff', '#fef08a', '#fde68a', '#e0f2fe', '#fafafa'],
-  },
-  sample: {
-    bg: '#f0ebe3',
+  seasonal: {
+    bg: '#e8e4dc',
     shelf: '#6b6560',
-    colors: ['#dc2626', '#ea580c', '#ca8a04', '#16a34a', '#db2777'],
-  },
-  bulkPaper: {
-    bg: '#ebe8e2',
-    shelf: '#8a857c',
-    colors: ['#fafafa', '#f0ede8', '#ddd8cf', '#e8e4dc', '#cfc9be'],
-    kirkland: true,
+    colors: ['#b45309', '#0369a1', '#15803d', '#7c2d12', '#4c1d95', '#fafafa'],
+    seasonal: true,
   },
   grocery: {
     bg: '#f5f0e8',
@@ -35,20 +27,20 @@ const PALETTES: Record<
     colors: ['#e11d48', '#005dab', '#fbbf24', '#16a34a', '#1e293b', '#fafafa'],
     kirkland: true,
   },
-  electronics: {
-    bg: '#d8dee6',
-    shelf: '#5c6672',
-    colors: ['#111827', '#1f2937', '#2563eb', '#374151', '#0ea5e9'],
-    gloss: true,
+  household: {
+    bg: '#e8eef4',
+    shelf: '#64748b',
+    colors: ['#0284c7', '#0ea5e9', '#f59e0b', '#ffffff', '#16a34a', '#6366f1'],
   },
-  bakery: {
-    bg: '#f2e8da',
-    shelf: '#7a6248',
-    colors: ['#c9924a', '#a86b32', '#e8c9a0', '#8b5a2b', '#f0d4a8'],
+  bulkPaper: {
+    bg: '#ebe8e2',
+    shelf: '#8a857c',
+    colors: ['#fafafa', '#f0ede8', '#ddd8cf', '#e8e4dc', '#cfc9be'],
+    kirkland: true,
   },
 };
 
-const cache = new Map<DeptKey, THREE.CanvasTexture>();
+const cache = new Map<CenterRackDept, THREE.CanvasTexture>();
 
 function pickColor(colors: string[], row: number, col: number): string {
   return colors[(row * 3 + col * 2) % colors.length];
@@ -61,8 +53,25 @@ function drawKirklandBand(ctx: CanvasRenderingContext2D, bx: number, by: number,
   ctx.fillRect(bx, by + bh * 0.76, bw, bh * 0.1);
 }
 
-function createDeptTexture(dept: DeptKey): THREE.CanvasTexture {
-  const { bg, shelf, colors, gloss, kirkland } = PALETTES[dept];
+function drawTvSilhouette(ctx: CanvasRenderingContext2D, bx: number, by: number, bw: number, bh: number) {
+  ctx.fillStyle = '#0f172a';
+  ctx.fillRect(bx + bw * 0.08, by + bh * 0.12, bw * 0.84, bh * 0.62);
+  ctx.fillStyle = '#1e3a5f';
+  ctx.fillRect(bx + bw * 0.12, by + bh * 0.16, bw * 0.76, bh * 0.52);
+  ctx.fillStyle = '#334155';
+  ctx.fillRect(bx + bw * 0.38, by + bh * 0.78, bw * 0.24, bh * 0.08);
+}
+
+function drawSeasonalTag(ctx: CanvasRenderingContext2D, bx: number, by: number, bw: number, bh: number) {
+  ctx.fillStyle = '#dc2626';
+  ctx.fillRect(bx, by + bh * 0.08, bw * 0.55, bh * 0.18);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 9px sans-serif';
+  ctx.fillText('DEAL', bx + bw * 0.06, by + bh * 0.2);
+}
+
+function createDeptTexture(dept: CenterRackDept): THREE.CanvasTexture {
+  const { bg, shelf, colors, gloss, kirkland, seasonal } = PALETTES[dept];
   const size = 256;
   const canvas = document.createElement('canvas');
   canvas.width = size;
@@ -71,7 +80,7 @@ function createDeptTexture(dept: DeptKey): THREE.CanvasTexture {
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, size, size);
 
-  const shelfBands = dept === 'bulkPaper' || dept === 'grocery' ? 5 : dept === 'frozen' ? 5 : 4;
+  const shelfBands = dept === 'bulkPaper' || dept === 'grocery' ? 5 : dept === 'household' ? 5 : 4;
   const bandH = size / shelfBands;
 
   for (let row = 0; row < shelfBands; row++) {
@@ -79,7 +88,8 @@ function createDeptTexture(dept: DeptKey): THREE.CanvasTexture {
     ctx.fillStyle = shelf;
     ctx.fillRect(0, y0 + bandH - 5, size, 5);
 
-    const cols = dept === 'bulkPaper' ? 4 : dept === 'grocery' ? 5 : 5 + (row % 2);
+    const cols =
+      dept === 'bulkPaper' ? 4 : dept === 'grocery' || dept === 'household' ? 5 : dept === 'electronics' ? 3 : 5;
     const cellW = size / cols;
 
     for (let col = 0; col < cols; col++) {
@@ -88,7 +98,7 @@ function createDeptTexture(dept: DeptKey): THREE.CanvasTexture {
       const by = y0 + pad + 2;
       const bw = cellW - pad * 2;
       const bh =
-        dept === 'bulkPaper' || dept === 'grocery'
+        dept === 'bulkPaper' || dept === 'grocery' || dept === 'household'
           ? bandH - pad * 2 - 6
           : bandH - pad * 2 - 8;
 
@@ -98,8 +108,16 @@ function createDeptTexture(dept: DeptKey): THREE.CanvasTexture {
       ctx.lineWidth = 1;
       ctx.strokeRect(bx + 0.5, by + 0.5, bw - 1, bh - 1);
 
+      if (dept === 'electronics' && (row + col) % 2 === 0) {
+        drawTvSilhouette(ctx, bx, by, bw, bh);
+      }
+
       if (kirkland && (row + col) % 3 === 0) {
         drawKirklandBand(ctx, bx, by, bw, bh);
+      }
+
+      if (seasonal && (row + col) % 4 === 0) {
+        drawSeasonalTag(ctx, bx, by, bw, bh);
       }
 
       if (gloss && (row + col) % 2 === 0) {
@@ -107,11 +125,9 @@ function createDeptTexture(dept: DeptKey): THREE.CanvasTexture {
         ctx.fillRect(bx + 2, by + 2, bw * 0.55, bh * 0.22);
       }
 
-      if (dept === 'frozen' && (row + col) % 4 === 0) {
-        ctx.fillStyle = 'rgba(255,255,255,0.45)';
-        for (let f = 0; f < 3; f++) {
-          ctx.fillRect(bx + f * (bw / 4), by + f * 4, 3, 3);
-        }
+      if (dept === 'household' && (row + col) % 3 === 1) {
+        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+        ctx.fillRect(bx + bw * 0.15, by + bh * 0.1, bw * 0.35, bh * 0.75);
       }
     }
   }
@@ -124,7 +140,7 @@ function createDeptTexture(dept: DeptKey): THREE.CanvasTexture {
   return tex;
 }
 
-export function getDeptWallpaperTexture(dept: DeptKey): THREE.CanvasTexture {
+export function getDeptWallpaperTexture(dept: CenterRackDept): THREE.CanvasTexture {
   let tex = cache.get(dept);
   if (!tex) {
     tex = createDeptTexture(dept);
@@ -132,5 +148,3 @@ export function getDeptWallpaperTexture(dept: DeptKey): THREE.CanvasTexture {
   }
   return tex;
 }
-
-export type { DeptKey };

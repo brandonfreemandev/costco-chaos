@@ -1,5 +1,11 @@
 import { create } from 'zustand';
+import { questShelfById } from '../components/scene/warehouseLayout';
 import type { CartPhysics, PlayerState, ShoppingListItem, StoreZone } from '../types/state';
+
+function questWorldPosition(itemId: string) {
+  const { x, y, z } = questShelfById(itemId);
+  return { x, y, z };
+}
 
 interface PlayerStore extends PlayerState {
   damageMentalHealth: (amount: number) => void;
@@ -18,7 +24,7 @@ const SHOPPING_ITEMS: ShoppingListItem[] = [
     aisle: 'Aisle 501 (Meat)',
     category: 'meat',
     collected: false,
-    worldPosition: { x: -10, y: 1.1, z: -19.5 },
+    worldPosition: questWorldPosition('item-meat'),
     productColor: '#f5c6a5',
   },
   {
@@ -28,7 +34,7 @@ const SHOPPING_ITEMS: ShoppingListItem[] = [
     aisle: 'Aisle 310 (Bakery)',
     category: 'bakery',
     collected: false,
-    worldPosition: { x: -6.5, y: 0.95, z: 8 },
+    worldPosition: questWorldPosition('item-bakery'),
     productColor: '#d4a574',
   },
   {
@@ -38,7 +44,7 @@ const SHOPPING_ITEMS: ShoppingListItem[] = [
     aisle: 'Aisle 120 (Electronics)',
     category: 'electronics',
     collected: false,
-    worldPosition: { x: 6.5, y: 1.5, z: -5 },
+    worldPosition: questWorldPosition('item-electronics'),
     productColor: '#1a1a22',
   },
   {
@@ -48,7 +54,7 @@ const SHOPPING_ITEMS: ShoppingListItem[] = [
     aisle: 'Aisle 214 (Bulk Paper)',
     category: 'bulkPaper',
     collected: false,
-    worldPosition: { x: 11.5, y: 1.35, z: -19 },
+    worldPosition: questWorldPosition('item-paper'),
     productColor: '#f0ebe3',
   },
 ];

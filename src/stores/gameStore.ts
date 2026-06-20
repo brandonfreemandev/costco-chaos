@@ -57,7 +57,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     useSampleStationStore.getState().reset();
     useCheckoutStore.getState().reset();
     resetNpcBumpCooldowns();
-    grantSpawnBumpGrace();
+    grantSpawnBumpGrace(4200);
     set({
       parkingSpotSecured: true,
       phase: 'SHOPPING',

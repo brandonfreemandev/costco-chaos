@@ -1,18 +1,23 @@
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
-import { buildRackSegments, RACK_HEIGHT, SPINE_DEPTH } from './warehouseLayout';
+import {
+  buildRackVisualChunks,
+  RACK_HEIGHT,
+  SPINE_DEPTH,
+  type CenterRackDept,
+  type RackVisualChunk,
+} from './warehouseLayout';
 import { getDeptWallpaperTexture } from './shelfWallpaperTextures';
 
 const FACE_OFFSET = SPINE_DEPTH / 2 + 0.02;
 
-const DEPARTMENTS = [
-  { name: 'bakery' as const, zMin: 16, zMax: Infinity },
-  { name: 'electronics' as const, zMin: 4, zMax: 16 },
-  { name: 'grocery' as const, zMin: -2, zMax: 4 },
-  { name: 'bulkPaper' as const, zMin: -8, zMax: -2 },
-  { name: 'sample' as const, zMin: -12, zMax: -8 },
-  { name: 'dairy' as const, zMin: -18, zMax: -12 },
-  { name: 'frozen' as const, zMin: -Infinity, zMax: -18 },
+/** Center-steel departments only — fresh/coolers live on perimeter facades. */
+const CENTER_RACK_DEPTS: CenterRackDept[] = [
+  'electronics',
+  'seasonal',
+  'grocery',
+  'household',
+  'bulkPaper',
 ];
 
 function createMaterial(tex: THREE.Texture) {
@@ -24,36 +29,33 @@ function createMaterial(tex: THREE.Texture) {
 }
 
 function RackShelfFaces({
-  segments,
+  chunks,
   material,
 }: {
-  segments: ReturnType<typeof buildRackSegments>;
+  chunks: RackVisualChunk[];
   material: THREE.Material;
 }) {
   const ref = useRef<THREE.InstancedMesh>(null);
   const dummy = useMemo(() => new THREE.Object3D(), []);
-  const count = segments.length * 2;
+  const count = chunks.length * 2;
 
   useLayoutEffect(() => {
     const mesh = ref.current;
     if (!mesh) return;
 
     let i = 0;
-    for (const seg of segments) {
-      const len = seg.z1 - seg.z0;
-      const cz = (seg.z0 + seg.z1) / 2;
-
+    for (const chunk of chunks) {
       for (const sign of [-1, 1] as const) {
-        dummy.position.set(seg.x + sign * FACE_OFFSET, RACK_HEIGHT / 2, cz);
-        dummy.rotation.set(0, sign > 0 ? Math.PI / 2 : -Math.PI / 2, 0);
-        dummy.scale.set(len, RACK_HEIGHT, 1);
+        dummy.position.set(chunk.x, RACK_HEIGHT / 2, chunk.z + sign * FACE_OFFSET);
+        dummy.rotation.set(0, sign > 0 ? 0 : Math.PI, 0);
+        dummy.scale.set(chunk.w, RACK_HEIGHT, 1);
         dummy.updateMatrix();
         mesh.setMatrixAt(i, dummy.matrix);
         i++;
       }
     }
     mesh.instanceMatrix.needsUpdate = true;
-  }, [segments, dummy]);
+  }, [chunks, dummy]);
 
   if (count === 0) return null;
 
@@ -66,31 +68,24 @@ function RackShelfFaces({
 
 function DepartmentWallpaper({
   dept,
-  allSegments,
+  allChunks,
 }: {
-  dept: (typeof DEPARTMENTS)[number];
-  allSegments: ReturnType<typeof buildRackSegments>;
+  dept: CenterRackDept;
+  allChunks: RackVisualChunk[];
 }) {
-  const material = useMemo(() => createMaterial(getDeptWallpaperTexture(dept.name)), [dept.name]);
-  const segments = useMemo(
-    () =>
-      allSegments.filter((s) => {
-        const cz = (s.z0 + s.z1) / 2;
-        return cz >= dept.zMin && cz < dept.zMax;
-      }),
-    [allSegments, dept.zMin, dept.zMax],
-  );
+  const material = useMemo(() => createMaterial(getDeptWallpaperTexture(dept)), [dept]);
+  const chunks = useMemo(() => allChunks.filter((c) => c.dept === dept), [allChunks, dept]);
 
-  return <RackShelfFaces segments={segments} material={material} />;
+  return <RackShelfFaces chunks={chunks} material={material} />;
 }
 
 export function ShelfWallpaper() {
-  const allSegments = useMemo(() => buildRackSegments(), []);
+  const allChunks = useMemo(() => buildRackVisualChunks(), []);
 
   return (
     <>
-      {DEPARTMENTS.map((dept) => (
-        <DepartmentWallpaper key={dept.name} dept={dept} allSegments={allSegments} />
+      {CENTER_RACK_DEPTS.map((dept) => (
+        <DepartmentWallpaper key={dept} dept={dept} allChunks={allChunks} />
       ))}
     </>
   );

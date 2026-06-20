@@ -10,8 +10,10 @@ import { useCartTransformStore } from '../stores/cartTransformStore';
 import { useCheckoutStore } from '../stores/checkoutStore';
 import { useGameStore } from '../stores/gameStore';
 import { useUIStore } from '../stores/uiStore';
+import { useChaosTestStore } from '../stores/chaosTestStore';
+import { resetChaosMonitorTracking } from '../systems/chaosMonitor';
 
-/** Dev shortcuts: I = skip parking, O = skip shopping → checkout (test queue, no perks). */
+/** Dev shortcuts: I = skip parking, O = skip checkout, T = layout watchdog on/off. */
 export function useGameShortcuts(): void {
   const phase = useGameStore((s) => s.phase);
   const secureParkingSpot = useGameStore((s) => s.secureParkingSpot);
@@ -50,6 +52,22 @@ export function useGameShortcuts(): void {
           lastCollisionMessage: `Dev skip — lane ${playerLaneId ?? '?'}, ${slotsFromFront} carts ahead.`,
         });
         console.log('[Shortcut] O — test checkout queue');
+        return;
+      }
+
+      if (import.meta.env.DEV && event.code === 'KeyT') {
+        event.preventDefault();
+        const store = useChaosTestStore.getState();
+        const turningOn = !store.monitorOn;
+        if (turningOn) {
+          resetChaosMonitorTracking();
+          store.clearViolations();
+          store.setMonitor(true);
+          console.log('[Shortcut] T — watchdog ON (play normally, issues log below)');
+        } else {
+          store.setMonitor(false);
+          console.log('[Shortcut] T — watchdog OFF');
+        }
       }
     };
 

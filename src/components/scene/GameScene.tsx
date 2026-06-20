@@ -13,6 +13,7 @@ import { EntranceSensor } from './EntranceSensor';
 import { FirstPersonCartCamera } from './FirstPersonCartCamera';
 import { useGameStore } from '../../stores/gameStore';
 import { useBootStore } from '../../stores/bootStore';
+import { ChaosTestRunner } from './ChaosTestRunner';
 
 function SceneContent() {
   const phase = useGameStore((s) => s.phase);
@@ -60,6 +61,7 @@ function SceneContent() {
         {inWarehouse && <WarehouseAisles />}
         <EntranceSensor />
         <ShoppingCart />
+        {import.meta.env.DEV && <ChaosTestRunner />}
       </Physics>
 
       <ContactShadows

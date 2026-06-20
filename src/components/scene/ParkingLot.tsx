@@ -235,7 +235,7 @@ export function ParkingLot() {
         <AbandonedCart key={`abandon-${i}`} x={cart.x} z={cart.z} />
       ))}
 
-      <NpcCrowd configs={gauntletNpcs} cullDistance={24} wakeDistance={28} />
+      <NpcCrowd configs={gauntletNpcs} alwaysActive cullDistance={24} wakeDistance={28} />
     </group>
   );
 }

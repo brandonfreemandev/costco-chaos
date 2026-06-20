@@ -1,6 +1,6 @@
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
-import { buildRackSegments, RACK_HEIGHT, SPINE_DEPTH } from './warehouseLayout';
+import { buildRackVisualChunks, RACK_HEIGHT, SPINE_DEPTH } from './warehouseLayout';
 
 const BOX_COLORS = ['#c9924a', '#2563eb', '#dc2626', '#16a34a', '#7c3aed', '#ea580c', '#0891b2', '#fafafa'];
 
@@ -10,7 +10,7 @@ function hash(n: number): number {
 
 /** Bulk product boxes on rack faces — decorative only (no collision). */
 export function RackBulkProps() {
-  const segments = useMemo(() => buildRackSegments(), []);
+  const chunks = useMemo(() => buildRackVisualChunks(), []);
 
   const instances = useMemo(() => {
     const list: { x: number; y: number; z: number; sx: number; sy: number; sz: number; color: string }[] = [];
@@ -20,16 +20,16 @@ export function RackBulkProps() {
       const count = Math.max(2, Math.floor(span / 1.4));
       for (let i = 0; i < count; i++) {
         const t = (i + 0.5) / count;
-        const z = cz - span / 2 + t * span;
+        const x = cx - span / 2 + t * span;
         for (const y of shelfYs) {
           if (hash(seed + i * 7 + Math.floor(y)) % 5 === 0) continue;
           const w = 0.55 + (hash(seed + i) % 4) * 0.12;
           const h = 0.35 + (hash(seed + i + 1) % 3) * 0.1;
           const d = 0.42 + (hash(seed + i + 2) % 3) * 0.08;
           list.push({
-            x: cx + faceSign * (SPINE_DEPTH / 2 + d / 2 + 0.02),
+            x,
             y,
-            z,
+            z: cz + faceSign * (SPINE_DEPTH / 2 + d / 2 + 0.02),
             sx: w,
             sy: h,
             sz: d,
@@ -39,14 +39,12 @@ export function RackBulkProps() {
       }
     };
 
-    segments.forEach((seg, si) => {
-      const len = seg.z1 - seg.z0;
-      const cz = (seg.z0 + seg.z1) / 2;
-      addFaceBoxes(seg.x, cz, seg.faceSide, len, si * 31);
+    chunks.forEach((chunk, ci) => {
+      addFaceBoxes(chunk.x, chunk.z, chunk.faceSide, chunk.w, ci * 31);
     });
 
     return list;
-  }, [segments]);
+  }, [chunks]);
 
   if (instances.length === 0) return null;
 
@@ -63,27 +61,26 @@ export function RackBulkProps() {
 }
 
 /** Orange rack upright accents (Costco pallet-rack color). */
-export function RackUprights({ segments }: { segments: ReturnType<typeof buildRackSegments> }) {
+export function RackUprights({ chunks }: { chunks: ReturnType<typeof buildRackVisualChunks> }) {
   const ref = useRef<THREE.InstancedMesh>(null);
   const dummy = useMemo(() => new THREE.Object3D(), []);
-  const count = segments.length * 2;
+  const count = chunks.length * 2;
 
   useLayoutEffect(() => {
     const mesh = ref.current;
     if (!mesh) return;
     let i = 0;
-    for (const seg of segments) {
-      const len = seg.z1 - seg.z0;
+    for (const chunk of chunks) {
       for (const sign of [-1, 1] as const) {
-        dummy.position.set(seg.x + sign * (SPINE_DEPTH / 2 - 0.06), RACK_HEIGHT / 2, (seg.z0 + seg.z1) / 2);
-        dummy.scale.set(0.08, RACK_HEIGHT, len);
+        dummy.position.set(chunk.x + sign * (chunk.w / 2 - 0.06), RACK_HEIGHT / 2, chunk.z);
+        dummy.scale.set(0.08, RACK_HEIGHT, SPINE_DEPTH - 0.08);
         dummy.updateMatrix();
         mesh.setMatrixAt(i, dummy.matrix);
         i++;
       }
     }
     mesh.instanceMatrix.needsUpdate = true;
-  }, [segments, dummy]);
+  }, [chunks, dummy]);
 
   return (
     <instancedMesh ref={ref} args={[undefined, undefined, count]} frustumCulled>

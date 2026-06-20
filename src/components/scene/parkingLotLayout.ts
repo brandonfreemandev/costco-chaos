@@ -49,7 +49,7 @@ export const APPROACH_CART_OBSTACLES = [
 ] as const;
 
 /** South aisle entry — clear of quest patrols at (−7.5, 8) and cross-aisle traffic at z ≈ 16. */
-export const WAREHOUSE_INTERIOR_SPAWN = { x: -2.5, z: -23, yaw: Math.PI } as const;
+export const WAREHOUSE_INTERIOR_SPAWN = { x: -7.5, z: 18, yaw: Math.PI } as const;
 
 export const ENTRANCE_ZONE = {
   minX: -BUILDING.entranceWidth / 2 - 0.4,

@@ -43,7 +43,6 @@ const PLAYER_COLLISION_GROUPS = interactionGroups(COLLISION_GROUP.PLAYER, []);
 const yawQuat = new THREE.Quaternion();
 const euler = new THREE.Euler(0, 0, 0, 'YXZ');
 const positionVec = new THREE.Vector3();
-
 export function ShoppingCart() {
   const bodyRef = useRef<RapierRigidBody>(null);
   useCartInput();
@@ -66,11 +65,14 @@ export function ShoppingCart() {
     }
     if (phase === 'SHOPPING' && lastPhase.current !== 'SHOPPING') {
       if (lastPhase.current === 'PARKING' || lastPhase.current === 'MENU' || lastPhase.current === null) {
-        yawRef.current = WAREHOUSE_INTERIOR_SPAWN.yaw;
-        posRef.current = { x: WAREHOUSE_INTERIOR_SPAWN.x, z: WAREHOUSE_INTERIOR_SPAWN.z };
+        listCompleteFired.current = false;
         vxRef.current = 0;
         vzRef.current = 0;
-        listCompleteFired.current = false;
+        const pending = useCartTransformStore.getState().pendingTeleport;
+        if (!pending) {
+          yawRef.current = WAREHOUSE_INTERIOR_SPAWN.yaw;
+          posRef.current = { x: WAREHOUSE_INTERIOR_SPAWN.x, z: WAREHOUSE_INTERIOR_SPAWN.z };
+        }
       }
     }
     lastPhase.current = phase;
@@ -140,14 +142,29 @@ export function ShoppingCart() {
     const staticObs =
       game.phase === 'PARKING' ? getParkingObstacles() : getWarehouseObstacles();
     const obstacles = staticObs.concat(getNpcObstacles());
-    const intendedX = posRef.current.x + vx * dt;
-    const intendedZ = posRef.current.z + vz * dt;
-    const moved = resolveCartMove(posRef.current.x, posRef.current.z, vx * dt, vz * dt, obstacles);
+    const prevX = posRef.current.x;
+    const prevZ = posRef.current.z;
+    const moveDx = vx * dt;
+    const moveDz = vz * dt;
+    const moved = resolveCartMove(prevX, prevZ, moveDx, moveDz, obstacles);
     posRef.current.x = moved.x;
     posRef.current.z = moved.z;
 
-    if (Math.abs(moved.x - intendedX) > 0.02) vx = 0;
-    if (Math.abs(moved.z - intendedZ) > 0.02) vz = 0;
+    const actualDx = moved.x - prevX;
+    const actualDz = moved.z - prevZ;
+    const intentDist = Math.hypot(moveDx, moveDz);
+    const actualDist = Math.hypot(actualDx, actualDz);
+
+    if (intentDist > 0.025) {
+      if (actualDist < intentDist * 0.15) {
+        vx = 0;
+        vz = 0;
+      } else if (actualDist > 0.002) {
+        const slide = actualDist / intentDist;
+        vx *= slide;
+        vz *= slide;
+      }
+    }
 
     if (game.phase === 'SHOPPING' || game.phase === 'CHECKOUT') {
       posRef.current.x = Math.max(WH_MIN_X + 1.5, Math.min(WH_MAX_X - 1.5, posRef.current.x));

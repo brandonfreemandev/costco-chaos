@@ -2,9 +2,10 @@ import { useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { getFloorGlowTexture } from './floorGlowTexture';
 import { WAREHOUSE_CEILING_LIGHTS } from './warehouseLightGrid';
-import { AISLE_WIDTH } from './warehouseLayout';
+import { AISLE_SPECS } from './warehouseLayout';
 
 const ROW_GLOW_DEPTH = 4.2;
+const aisleWidthAt = (x: number) => AISLE_SPECS.find((a) => a.x === x)?.width ?? 3.1;
 
 const glowMaterial = new THREE.MeshBasicMaterial({
   map: getFloorGlowTexture(),
@@ -28,7 +29,7 @@ export function WarehouseFloorGlow() {
     WAREHOUSE_CEILING_LIGHTS.forEach((light, i) => {
       dummy.position.set(light.x, 0.035, light.z);
       dummy.rotation.set(-Math.PI / 2, 0, 0);
-      dummy.scale.set(AISLE_WIDTH * 0.95, ROW_GLOW_DEPTH, 1);
+      dummy.scale.set(aisleWidthAt(light.x) * 0.95, ROW_GLOW_DEPTH, 1);
       dummy.updateMatrix();
       mesh.setMatrixAt(i, dummy.matrix);
     });

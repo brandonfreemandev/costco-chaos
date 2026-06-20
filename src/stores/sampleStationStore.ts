@@ -14,7 +14,7 @@ interface SampleStationState {
   lastTakenAt: Record<string, number>;
   isKioskReady: (kioskId: string) => boolean;
   tryTakeSample: (px: number, pz: number) => { ok: boolean; kioskId?: string };
-  getSwarmTarget: () => { x: number; z: number } | null;
+  getSwarmTarget: (npcId?: string) => { x: number; z: number } | null;
   getPrompt: (px: number, pz: number) => string | null;
   reset: () => void;
 }
@@ -50,10 +50,16 @@ export const useSampleStationStore = create<SampleStationState>((set, get) => ({
     return { ok: false };
   },
 
-  getSwarmTarget: () => {
+  getSwarmTarget: (npcId?: string) => {
     const ready = SAMPLE_KIOSKS.filter((k) => get().isKioskReady(k.id));
     if (ready.length === 0) return null;
-    return { x: ready[0].x, z: ready[0].z };
+    if (!npcId) return { x: ready[0].x, z: ready[0].z };
+    let h = 0;
+    for (let i = 0; i < npcId.length; i++) {
+      h = (h * 31 + npcId.charCodeAt(i)) | 0;
+    }
+    const kiosk = ready[Math.abs(h) % ready.length];
+    return { x: kiosk.x, z: kiosk.z };
   },
 
   getPrompt: (px, pz) => {

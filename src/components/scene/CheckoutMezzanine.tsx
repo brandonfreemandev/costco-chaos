@@ -360,7 +360,7 @@ export function CheckoutMezzanine() {
                 return Array.from({ length: visible }).map((_, q) => {
                   const look = queueNpcLook(laneId, q);
                   return (
-                    <group key={`q-${q}`} position={[CUSTOMER_SIDE_X, 0, queueSlotZ(q)]} rotation={[0, -Math.PI / 2, 0]}>
+                    <group key={`q-${q}`} position={[CUSTOMER_SIDE_X, 0, queueSlotZ(q)]} rotation={[0, 0, 0]}>
                       <ShopperAvatar
                         shirtColor={look.shirt}
                         skinTone={look.skin}

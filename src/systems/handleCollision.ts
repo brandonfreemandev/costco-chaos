@@ -1,8 +1,8 @@
 import { usePlayerStore } from '../stores/playerStore';
 import { useGameStore } from '../stores/gameStore';
 import { useUIStore } from '../stores/uiStore';
-import { mapRange } from '../utils/math';
 import { spatialAudio } from '../audio/spatialAudioManager';
+import { mapRange } from '../utils/math';
 import { getNpcMeta } from './npcRegistry';
 
 export const MIN_IMPACT = 0.15;

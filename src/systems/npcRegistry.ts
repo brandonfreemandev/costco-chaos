@@ -1,7 +1,10 @@
+export type NpcPatrolAxis = 'column' | 'row' | 'free';
+
 export interface NpcCollisionMeta {
   isNpc: true;
   cartLoad: number;
   npcId: string;
+  patrolAxis?: NpcPatrolAxis;
 }
 
 export interface NpcRuntimeState {
@@ -9,6 +12,10 @@ export interface NpcRuntimeState {
   x: number;
   z: number;
   speed: number;
+  /** Intentional grid-patrol pause — watchdog ignores brief stops. */
+  paused?: boolean;
+  /** Sliding against obstacles without net progress. */
+  jittering?: boolean;
 }
 
 const registry = new Map<number, NpcCollisionMeta>();
@@ -34,8 +41,10 @@ export function updateNpcRuntime(
   x: number,
   z: number,
   speed: number,
+  paused = false,
+  jittering = false,
 ): void {
-  runtimes.set(handle, { meta, x, z, speed });
+  runtimes.set(handle, { meta, x, z, speed, paused, jittering });
 }
 
 export function getActiveNpcRuntimes(): NpcRuntimeState[] {

@@ -5,18 +5,21 @@ import {
   LOT,
 } from '../components/scene/parkingLotLayout';
 import {
-  buildRackSegments,
-  SPINE_DEPTH,
+  buildRackCollisionObstacles,
+  invalidateRackCollisionCache,
+  RACK_COLLISION_DEPTH,
   WH_MAX_X,
   WH_MAX_Z,
   WH_MIN_X,
   WH_MIN_Z,
 } from '../components/scene/warehouseLayout';
+import { USE_MVP_WAREHOUSE } from '../mvp/mvpLayout';
+import { getMvpWarehouseObstacles } from '../mvp/mvpCollision';
 import { useCartTransformStore } from '../stores/cartTransformStore';
 import { useGameStore } from '../stores/gameStore';
 import type { GamePhase } from '../types/state';
 import { SAMPLE_KIOSKS } from './sampleStations';
-import { getActiveNpcRuntimes } from './npcRegistry';
+import { getActiveNpcRuntimes, type NpcPatrolAxis } from './npcRegistry';
 
 export interface Aabb {
   minX: number;
@@ -24,6 +27,8 @@ export interface Aabb {
   minZ: number;
   maxZ: number;
 }
+
+export { RACK_COLLISION_DEPTH };
 
 export const CART_HALF_X = 0.55;
 export const CART_HALF_Z = 0.95;
@@ -33,23 +38,64 @@ export function getNpcHalfExtents(cartLoad: number): { hx: number; hz: number } 
   return { hx: hasCart ? 0.72 : 0.42, hz: hasCart ? 1.35 : 0.42 };
 }
 
+/** Cart long axis follows travel — row patrol swaps X/Z half extents. */
+export function getNpcObstacleExtents(
+  cartLoad: number,
+  patrolAxis: NpcPatrolAxis = 'free',
+): { hx: number; hz: number } {
+  const { hx, hz } = getNpcHalfExtents(cartLoad);
+  if (patrolAxis === 'row') return { hx: hz, hz: hx };
+  return { hx, hz };
+}
+
 const SKIN = 0.05;
 const SUBSTEP = 0.18;
+/** Perimeter dept collision — thin strips on the wall plane, not wide blocks in the racetrack. */
+const EAST_FACADE_X = WH_MAX_X - 0.42;
+const WEST_FACADE_X = WH_MIN_X + 0.42;
+const EAST_DEPT_STRIP_W = 0.7;
+const WEST_COOLER_STRIP_W = 1.05;
 
-function rackAabb(x: number, z0: number, z1: number): Aabb {
-  const halfX = SPINE_DEPTH / 2;
-  return { minX: x - halfX, maxX: x + halfX, minZ: z0, maxZ: z1 };
+function getPerimeterDeptObstacles(): Aabb[] {
+  const eastCx = EAST_FACADE_X - EAST_DEPT_STRIP_W / 2;
+  const westCx = WEST_FACADE_X + WEST_COOLER_STRIP_W / 2;
+
+  return [
+    blockAabb(eastCx, 13, EAST_DEPT_STRIP_W, 27),
+    blockAabb(westCx, -18, WEST_COOLER_STRIP_W, 9.5),
+    blockAabb(westCx, -4, WEST_COOLER_STRIP_W, 10.5),
+    blockAabb(westCx, 12, WEST_COOLER_STRIP_W, 8.5),
+  ];
 }
 
 function blockAabb(x: number, z: number, w: number, d: number): Aabb {
   return { minX: x - w / 2, maxX: x + w / 2, minZ: z - d / 2, maxZ: z + d / 2 };
 }
 
+function overlaps(x: number, z: number, hx: number, hz: number, box: Aabb): boolean {
+  return x + hx > box.minX && x - hx < box.maxX && z + hz > box.minZ && z - hz < box.maxZ;
+}
+
+/** True when a cart hull overlaps rack pallet hitboxes (aisle corridors carved out). */
+export function cartOverlapsRackObstacle(
+  x: number,
+  z: number,
+  hx = CART_HALF_X,
+  hz = CART_HALF_Z,
+): boolean {
+  for (const box of buildRackCollisionObstacles()) {
+    if (overlaps(x, z, hx, hz, box)) return true;
+  }
+  return false;
+}
+
 let warehouseCache: Aabb[] | null = null;
 
 export function invalidateWarehouseObstacleCache(): void {
   warehouseCache = null;
+  invalidateRackCollisionCache();
 }
+
 let parkingCache: Aabb[] | null = null;
 
 export function invalidateParkingObstacleCache(): void {
@@ -57,13 +103,12 @@ export function invalidateParkingObstacleCache(): void {
 }
 
 export function getWarehouseObstacles(): Aabb[] {
+  if (USE_MVP_WAREHOUSE) return getMvpWarehouseObstacles();
   if (warehouseCache) return warehouseCache;
 
-  const boxes: Aabb[] = [];
-  for (const seg of buildRackSegments()) {
-    boxes.push(rackAabb(seg.x, seg.z0, seg.z1));
-  }
+  const boxes: Aabb[] = [...buildRackCollisionObstacles()];
   boxes.push(blockAabb(-11, WH_MIN_Z + 0.95, 6.5, 1.0));
+  boxes.push(...getPerimeterDeptObstacles());
   boxes.push({ minX: WH_MIN_X, maxX: WH_MAX_X, minZ: WH_MIN_Z - 1, maxZ: WH_MIN_Z + 0.5 });
   boxes.push({ minX: WH_MIN_X, maxX: WH_MAX_X, minZ: WH_MAX_Z - 0.5, maxZ: WH_MAX_Z + 1 });
   boxes.push({ minX: WH_MIN_X - 1, maxX: WH_MIN_X + 0.5, minZ: WH_MIN_Z, maxZ: WH_MAX_Z });
@@ -95,7 +140,6 @@ export function getParkingObstacles(): Aabb[] {
   return boxes;
 }
 
-/** Live shopper/cart boxes — kinematic player ignores Rapier, so these must be manual too. */
 export function getNpcObstacles(): Aabb[] {
   const boxes: Aabb[] = [];
   for (const npc of getActiveNpcRuntimes()) {
@@ -110,12 +154,13 @@ export function getNpcObstacles(): Aabb[] {
   return boxes;
 }
 
-/** Player cart hull for NPC manual blocking (player uses manual motion too). */
 export function getPlayerObstacle(): Aabb | null {
   const phase = useGameStore.getState().phase;
   if (phase !== 'PARKING' && phase !== 'SHOPPING' && phase !== 'CHECKOUT') return null;
 
-  const { position } = useCartTransformStore.getState();
+  const { position, speed } = useCartTransformStore.getState();
+  if (speed < 0.18) return null;
+
   return {
     minX: position.x - CART_HALF_X,
     maxX: position.x + CART_HALF_X,
@@ -124,18 +169,31 @@ export function getPlayerObstacle(): Aabb | null {
   };
 }
 
-/** Sample counter footprint — blocks NPCs, not the player (cart rolls through the ring). */
 function getSampleKioskObstacles(): Aabb[] {
   return SAMPLE_KIOSKS.map((kiosk) => blockAabb(kiosk.x, kiosk.z, 1.75, 0.75));
 }
 
+export interface NpcMovementSelf {
+  x: number;
+  z: number;
+  hx: number;
+  hz: number;
+  patrolAxis: NpcPatrolAxis;
+}
+
 /** Static + player + other shoppers (+ sample counters in warehouse). */
-export function getNpcMovementObstacles(phase: GamePhase, excludeNpcId: string): Aabb[] {
+export function getNpcMovementObstacles(
+  phase: GamePhase,
+  excludeNpcId: string,
+  self?: NpcMovementSelf,
+): Aabb[] {
   const boxes =
     phase === 'PARKING' ? getParkingObstacles().slice() : getWarehouseObstacles().slice();
 
   if (phase === 'SHOPPING' || phase === 'CHECKOUT') {
-    boxes.push(...getSampleKioskObstacles());
+    if (!excludeNpcId.startsWith('wh-sample')) {
+      boxes.push(...getSampleKioskObstacles());
+    }
   }
 
   const player = getPlayerObstacle();
@@ -143,7 +201,30 @@ export function getNpcMovementObstacles(phase: GamePhase, excludeNpcId: string):
 
   for (const npc of getActiveNpcRuntimes()) {
     if (npc.meta.npcId === excludeNpcId) continue;
-    const { hx, hz } = getNpcHalfExtents(npc.meta.cartLoad);
+
+    let { hx, hz } = getNpcHalfExtents(npc.meta.cartLoad);
+    const otherAxis = npc.meta.patrolAxis ?? 'free';
+    if (otherAxis === 'row') {
+      ({ hx, hz } = { hx: hz, hz: hx });
+    }
+
+    if (self?.patrolAxis === 'column' && otherAxis === 'row') {
+      // Row patrol fixed Z — yield right-of-way at every cross-aisle (not just center).
+      if (Math.abs(npc.z - self.z) < hz + self.hz + 1.85) {
+        continue;
+      }
+    } else if (self?.patrolAxis === 'row' && otherAxis === 'column') {
+      if (Math.abs(npc.z - self.z) < hz + self.hz + 1.85) {
+        continue;
+      }
+    } else if (self?.patrolAxis === 'column' && otherAxis === 'column') {
+      if (Math.abs(npc.x - self.x) < 0.45 && Math.abs(npc.z - self.z) > hz + self.hz + 2.8) {
+        continue;
+      }
+    } else if (npc.speed < 0.12) {
+      continue;
+    }
+
     boxes.push({
       minX: npc.x - hx,
       maxX: npc.x + hx,
@@ -153,10 +234,6 @@ export function getNpcMovementObstacles(phase: GamePhase, excludeNpcId: string):
   }
 
   return boxes;
-}
-
-function overlaps(x: number, z: number, hx: number, hz: number, box: Aabb): boolean {
-  return x + hx > box.minX && x - hx < box.maxX && z + hz > box.minZ && z - hz < box.maxZ;
 }
 
 function resolveAxis(
@@ -192,8 +269,12 @@ function depenetrate(x: number, z: number, hx: number, hz: number, obstacles: Aa
   let nx = x;
   let nz = z;
 
-  for (let iter = 0; iter < 8; iter++) {
-    let moved = false;
+  for (let iter = 0; iter < 6; iter++) {
+    let bestDepth = Infinity;
+    let pushX = 0;
+    let pushZ = 0;
+    let found = false;
+
     for (const box of obstacles) {
       if (!overlaps(nx, nz, hx, hz, box)) continue;
 
@@ -203,14 +284,21 @@ function depenetrate(x: number, z: number, hx: number, hz: number, obstacles: Aa
       const pushBottom = box.maxZ - (nz - hz);
       const min = Math.min(pushLeft, pushRight, pushTop, pushBottom);
 
-      if (min === pushLeft) nx -= pushLeft + SKIN;
-      else if (min === pushRight) nx += pushRight + SKIN;
-      else if (min === pushTop) nz -= pushTop + SKIN;
-      else nz += pushBottom + SKIN;
+      if (min < 0.08 || min >= bestDepth) continue;
 
-      moved = true;
+      found = true;
+      bestDepth = min;
+      pushX = 0;
+      pushZ = 0;
+      if (min === pushLeft) pushX = -(pushLeft + SKIN);
+      else if (min === pushRight) pushX = pushRight + SKIN;
+      else if (min === pushTop) pushZ = -(pushTop + SKIN);
+      else pushZ = pushBottom + SKIN;
     }
-    if (!moved) break;
+
+    if (!found) break;
+    nx += pushX;
+    nz += pushZ;
   }
 
   return { x: nx, z: nz };
@@ -223,7 +311,6 @@ export interface CartMoveResult {
   blockedZ: boolean;
 }
 
-/** Substepped axis slide + depenetration — deterministic, no Rapier dependency. */
 export function resolveCartMove(
   x: number,
   z: number,

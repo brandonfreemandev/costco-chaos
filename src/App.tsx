@@ -8,6 +8,7 @@ import { GameSidebar } from './components/hud/GameSidebar';
 import { GameHud } from './components/hud/GameHud';
 import { BumpFlash } from './components/hud/BumpFlash';
 import { LoadingScreen } from './components/hud/LoadingScreen';
+import { ChaosTestPanel } from './components/hud/ChaosTestPanel';
 import './App.css';
 
 export default function App() {
@@ -29,6 +30,7 @@ export default function App() {
           >
             <GameScene />
             <GameHud />
+            {import.meta.env.DEV && <ChaosTestPanel />}
             <BumpFlash />
           </div>
           <EnterGate />

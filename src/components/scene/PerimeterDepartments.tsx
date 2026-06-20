@@ -27,6 +27,9 @@ type DeptSpec = {
   protrude?: number;
 };
 
+/** Service facades bake the title into the canvas texture — no floating duplicate. */
+const TEXTURE_HAS_LABEL = new Set<PerimeterDeptKey>(['pharmacy', 'photo', 'optical']);
+
 function DeptPanel({ spec }: { spec: DeptSpec }) {
   const mat = useMemo(
     () =>
@@ -66,9 +69,11 @@ function DeptPanel({ spec }: { spec: DeptSpec }) {
         </>
       )}
 
-      <Text position={[0, spec.h / 2 - 0.05, 0.22]} fontSize={0.34} color="#f8fafc" anchorX="center" anchorY="middle">
-        {spec.label}
-      </Text>
+      {!TEXTURE_HAS_LABEL.has(spec.key) && (
+        <Text position={[0, spec.h / 2 - 0.05, 0.22]} fontSize={0.34} color="#f8fafc" anchorX="center" anchorY="middle">
+          {spec.label}
+        </Text>
+      )}
     </group>
   );
 }

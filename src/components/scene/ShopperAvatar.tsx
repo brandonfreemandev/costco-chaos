@@ -1,6 +1,9 @@
 import { CartModel } from './CartModel';
 import { SHOPPER_FOOT_LOCAL_Y } from './npcGrounding';
 
+/** Distance from shopper body origin to cart wheel ground (player push convention). */
+export const NPC_CART_PUSH_OFFSET = 0.58;
+
 export function ShopperAvatar({
   shirtColor,
   skinTone,
@@ -14,45 +17,47 @@ export function ShopperAvatar({
 }) {
   return (
     <group>
-      <mesh castShadow position={[-0.1, 0.38, 0]}>
-        <boxGeometry args={[0.14, 0.42, 0.16]} />
-        <meshStandardMaterial color="#3a4550" roughness={0.85} />
-      </mesh>
-      <mesh castShadow position={[0.1, 0.38, 0]}>
-        <boxGeometry args={[0.14, 0.42, 0.16]} />
-        <meshStandardMaterial color="#3a4550" roughness={0.85} />
-      </mesh>
+      <group>
+        <mesh castShadow position={[-0.1, 0.38, 0]}>
+          <boxGeometry args={[0.14, 0.42, 0.16]} />
+          <meshStandardMaterial color="#3a4550" roughness={0.85} />
+        </mesh>
+        <mesh castShadow position={[0.1, 0.38, 0]}>
+          <boxGeometry args={[0.14, 0.42, 0.16]} />
+          <meshStandardMaterial color="#3a4550" roughness={0.85} />
+        </mesh>
 
-      <mesh castShadow position={[0, 0.98, 0]}>
-        <boxGeometry args={[0.46, 0.62, 0.28]} />
-        <meshStandardMaterial color={shirtColor} roughness={0.78} metalness={0.04} envMapIntensity={0.85} />
-      </mesh>
+        <mesh castShadow position={[0, 0.98, 0]}>
+          <boxGeometry args={[0.46, 0.62, 0.28]} />
+          <meshStandardMaterial color={shirtColor} roughness={0.78} metalness={0.04} envMapIntensity={0.85} />
+        </mesh>
 
-      <mesh castShadow position={[0, 1.48, 0]}>
-        <sphereGeometry args={[0.19, 8, 8]} />
-        <meshStandardMaterial color={skinTone} roughness={0.75} />
-      </mesh>
+        <mesh castShadow position={[0, 1.48, 0]}>
+          <sphereGeometry args={[0.19, 8, 8]} />
+          <meshStandardMaterial color={skinTone} roughness={0.75} />
+        </mesh>
 
-      <mesh castShadow position={[0, 1.62, -0.04]}>
-        <sphereGeometry args={[0.2, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2]} />
-        <meshStandardMaterial color={hairColor} roughness={0.9} />
-      </mesh>
+        <mesh castShadow position={[0, 1.62, -0.04]}>
+          <sphereGeometry args={[0.2, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2]} />
+          <meshStandardMaterial color={hairColor} roughness={0.9} />
+        </mesh>
 
-      <mesh position={[-0.06, 1.5, 0.16]}>
-        <sphereGeometry args={[0.028, 8, 8]} />
-        <meshStandardMaterial color="#1a1a22" roughness={0.4} />
-      </mesh>
-      <mesh position={[0.06, 1.5, 0.16]}>
-        <sphereGeometry args={[0.028, 8, 8]} />
-        <meshStandardMaterial color="#1a1a22" roughness={0.4} />
-      </mesh>
-      <mesh position={[0, 1.42, 0.17]}>
-        <boxGeometry args={[0.05, 0.012, 0.012]} />
-        <meshStandardMaterial color="#8a6060" roughness={0.6} />
-      </mesh>
+        <mesh position={[-0.06, 1.5, 0.16]}>
+          <sphereGeometry args={[0.028, 8, 8]} />
+          <meshStandardMaterial color="#1a1a22" roughness={0.4} />
+        </mesh>
+        <mesh position={[0.06, 1.5, 0.16]}>
+          <sphereGeometry args={[0.028, 8, 8]} />
+          <meshStandardMaterial color="#1a1a22" roughness={0.4} />
+        </mesh>
+        <mesh position={[0, 1.42, 0.17]}>
+          <boxGeometry args={[0.05, 0.012, 0.012]} />
+          <meshStandardMaterial color="#8a6060" roughness={0.6} />
+        </mesh>
+      </group>
 
       {hasCart && (
-        <group position={[0, SHOPPER_FOOT_LOCAL_Y, 0.58]}>
+        <group position={[0, SHOPPER_FOOT_LOCAL_Y, NPC_CART_PUSH_OFFSET]}>
           <CartModel showHandle />
         </group>
       )}

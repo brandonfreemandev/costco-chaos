@@ -2,7 +2,7 @@ import { useGameStore } from '../../stores/gameStore';
 import { usePlayerStore } from '../../stores/playerStore';
 import { useCartTransformStore } from '../../stores/cartTransformStore';
 import { CHECKOUT_MEZZANINE } from '../scene/checkoutLayout';
-import { FRONT_COURT_MIN_Z, CROSS_AISLES_Z, WH_DEPTH, WH_MAX_Z, WH_MIN_X, WH_WIDTH } from '../scene/warehouseLayout';
+import { FRONT_COURT_MIN_Z, CROSS_AISLES_Z, RACETRACK_LOOP, WH_DEPTH, WH_MAX_Z, WH_MIN_X, WH_WIDTH } from '../scene/warehouseLayout';
 
 const MAP_W = 168;
 const MAP_H = Math.round((WH_DEPTH / WH_WIDTH) * MAP_W);
@@ -59,6 +59,23 @@ export function WarehouseMap({ floating = false }: { floating?: boolean }) {
             className="map-cross-aisle"
           />
         ))}
+
+        <rect
+          x={toMapX(RACETRACK_LOOP.westX0)}
+          y={toMapY(RACETRACK_LOOP.z1)}
+          width={((RACETRACK_LOOP.westX1 - RACETRACK_LOOP.westX0) / WH_WIDTH) * MAP_W}
+          height={((RACETRACK_LOOP.z1 - RACETRACK_LOOP.z0) / WH_DEPTH) * MAP_H}
+          className="map-racetrack"
+          rx={1}
+        />
+        <rect
+          x={toMapX(RACETRACK_LOOP.eastX0)}
+          y={toMapY(RACETRACK_LOOP.z1)}
+          width={((RACETRACK_LOOP.eastX1 - RACETRACK_LOOP.eastX0) / WH_WIDTH) * MAP_W}
+          height={((RACETRACK_LOOP.z1 - RACETRACK_LOOP.z0) / WH_DEPTH) * MAP_H}
+          className="map-racetrack"
+          rx={1}
+        />
 
         <rect
           x={toMapX(WH_MIN_X + 1)}

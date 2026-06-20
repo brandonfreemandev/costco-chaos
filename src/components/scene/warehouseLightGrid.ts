@@ -1,4 +1,4 @@
-import { AISLE_CENTERS_X, WH_CEILING, WH_MAX_Z, WH_MIN_Z } from './warehouseLayout';
+import { AISLE_SPECS, RACK_Z_MIN, RACK_Z_MAX, WH_CEILING } from './warehouseLayout';
 
 /** Fluorescent troffer positions — shared by fixtures, floor pools, and IBL lightformers. */
 export interface CeilingLightSpec {
@@ -7,13 +7,13 @@ export interface CeilingLightSpec {
   z: number;
 }
 
-const ROW_STEP = 11;
+const ROW_STEP = 9;
 const rowZ: number[] = [];
-for (let z = WH_MIN_Z + 6; z <= WH_MAX_Z - 6; z += ROW_STEP) {
+for (let z = RACK_Z_MIN + 5; z <= RACK_Z_MAX - 3; z += ROW_STEP) {
   rowZ.push(z);
 }
 
-export const WAREHOUSE_CEILING_LIGHTS: CeilingLightSpec[] = AISLE_CENTERS_X.flatMap((x) =>
+export const WAREHOUSE_CEILING_LIGHTS: CeilingLightSpec[] = AISLE_SPECS.flatMap(({ x }) =>
   rowZ.map((z) => ({ x, y: WH_CEILING - 0.28, z })),
 );
 

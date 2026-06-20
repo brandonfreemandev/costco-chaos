@@ -12,6 +12,7 @@ import { WarehouseFloorGlow } from './WarehouseFloorGlow';
 import { CheckoutMezzanine } from './CheckoutMezzanine';
 import { PerimeterDepartments } from './PerimeterDepartments';
 import { ShelfWallpaper } from './ShelfWallpaper';
+import { DebugOverlay } from '../../world/DebugOverlay';
 import { QuestCollectibles } from './ShelfProducts';
 import { RackBulkProps, RackUprights } from './RackBulkProps';
 import {
@@ -20,11 +21,13 @@ import {
   makeMappedMaterial,
 } from './materials/proceduralTextures';
 import {
-  AISLE_CENTERS_X,
-  AISLE_WIDTH,
-  buildRackSegments,
+  AISLE_SPECS,
+  buildRackVisualChunks,
   CROSS_AISLES_Z,
+  RACETRACK_LOOP,
   RACK_HEIGHT,
+  RACK_Z_MIN,
+  RACK_Z_MAX,
   SPINE_DEPTH,
   WH_CEILING,
   WH_DEPTH,
@@ -39,25 +42,24 @@ const floorMat = makeMappedMaterial(getWarehouseFloorTexture(), {
   envMapIntensity: 0.95,
 });
 
-function RackInstances({ segments }: { segments: ReturnType<typeof buildRackSegments> }) {
+function RackInstances({ chunks }: { chunks: ReturnType<typeof buildRackVisualChunks> }) {
   const ref = useRef<THREE.InstancedMesh>(null);
   const dummy = useMemo(() => new THREE.Object3D(), []);
 
   useLayoutEffect(() => {
     const mesh = ref.current;
     if (!mesh) return;
-    segments.forEach((seg, i) => {
-      const len = seg.z1 - seg.z0;
-      dummy.position.set(seg.x, RACK_HEIGHT / 2, (seg.z0 + seg.z1) / 2);
-      dummy.scale.set(SPINE_DEPTH, RACK_HEIGHT, len);
+    chunks.forEach((chunk, i) => {
+      dummy.position.set(chunk.x, RACK_HEIGHT / 2, chunk.z);
+      dummy.scale.set(chunk.w, RACK_HEIGHT, SPINE_DEPTH);
       dummy.updateMatrix();
       mesh.setMatrixAt(i, dummy.matrix);
     });
     mesh.instanceMatrix.needsUpdate = true;
-  }, [segments, dummy]);
+  }, [chunks, dummy]);
 
   return (
-    <instancedMesh ref={ref} args={[undefined, undefined, segments.length]} castShadow frustumCulled>
+    <instancedMesh ref={ref} args={[undefined, undefined, chunks.length]} castShadow frustumCulled>
       <boxGeometry args={[1, 1, 1]} />
       <meshStandardMaterial {...STEEL} />
     </instancedMesh>
@@ -69,14 +71,44 @@ function AisleRunners() {
     () => makeMappedMaterial(getWarehouseAisleTexture(), { roughness: 0.78, metalness: 0.04 }),
     [],
   );
+  const aisleLen = RACK_Z_MAX - RACK_Z_MIN;
+  const aisleZ = (RACK_Z_MIN + RACK_Z_MAX) / 2;
 
   return (
     <>
-      {AISLE_CENTERS_X.map((ax) => (
-        <mesh key={`run-${ax}`} rotation={[-Math.PI / 2, 0, 0]} position={[ax, 0.02, 0]} receiveShadow material={aisleMat}>
-          <planeGeometry args={[AISLE_WIDTH, WH_DEPTH - 6]} />
+      {AISLE_SPECS.map(({ x, width }) => (
+        <mesh key={`run-${x}`} rotation={[-Math.PI / 2, 0, 0]} position={[x, 0.02, aisleZ]} receiveShadow material={aisleMat}>
+          <planeGeometry args={[width, aisleLen]} />
         </mesh>
       ))}
+    </>
+  );
+}
+
+function RacetrackLoop() {
+  const mat = useMemo(
+    () => makeMappedMaterial(getWarehouseAisleTexture(), { roughness: 0.82, metalness: 0.02 }),
+    [],
+  );
+  const { z0, z1, westX0, westX1, eastX0, eastX1, southZ0, southZ1 } = RACETRACK_LOOP;
+  const loopZ = (z0 + z1) / 2;
+  const loopLen = z1 - z0;
+  const westW = westX1 - westX0;
+  const eastW = eastX1 - eastX0;
+  const southW = eastX1 - westX0;
+  const southZ = (southZ0 + southZ1) / 2;
+
+  return (
+    <>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[(westX0 + westX1) / 2, 0.018, loopZ]} receiveShadow material={mat}>
+        <planeGeometry args={[westW, loopLen]} />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[(eastX0 + eastX1) / 2, 0.018, loopZ]} receiveShadow material={mat}>
+        <planeGeometry args={[eastW, loopLen]} />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[(westX0 + eastX1) / 2, 0.017, southZ]} receiveShadow material={mat}>
+        <planeGeometry args={[southW, southZ1 - southZ0]} />
+      </mesh>
     </>
   );
 }
@@ -104,8 +136,8 @@ function AisleMarkers() {
 function AisleSigns() {
   const signConfigs = [
     { z: CROSS_AISLES_Z[0], label: 'SAMPLES →', accent: '#f59e0b' },
-    { z: CROSS_AISLES_Z[1], label: 'BAKERY', accent: '#d97706' },
-    { z: CROSS_AISLES_Z[2], label: 'ELECTRONICS', accent: '#2563eb' },
+    { z: CROSS_AISLES_Z[1], label: 'GROCERY', accent: '#005dab' },
+    { z: CROSS_AISLES_Z[2], label: 'HOUSEHOLD', accent: '#0284c7' },
     { z: CROSS_AISLES_Z[3], label: 'BULK PAPER', accent: '#64748b' },
   ];
 
@@ -140,9 +172,9 @@ function AisleSigns() {
 }
 
 export function WarehouseAisles() {
-  const rackSegments = useMemo(() => {
+  const rackChunks = useMemo(() => {
     invalidateWarehouseObstacleCache();
-    return buildRackSegments();
+    return buildRackVisualChunks();
   }, []);
   const npcs = useMemo(() => generateWarehouseNPCs(), []);
 
@@ -153,8 +185,9 @@ export function WarehouseAisles() {
       </mesh>
 
       <AisleRunners />
-      <RackInstances segments={rackSegments} />
-      <RackUprights segments={rackSegments} />
+      <RacetrackLoop />
+      <RackInstances chunks={rackChunks} />
+      <RackUprights chunks={rackChunks} />
       <RackBulkProps />
       <ShelfWallpaper />
       <AisleMarkers />
@@ -179,7 +212,9 @@ export function WarehouseAisles() {
         <SampleKiosk key={kiosk.id} kiosk={kiosk} />
       ))}
 
-      <NpcCrowd configs={npcs} cullDistance={18} wakeDistance={22} />
+      {import.meta.env.DEV && <DebugOverlay />}
+
+      <NpcCrowd configs={npcs} alwaysActive />
     </group>
   );
 }

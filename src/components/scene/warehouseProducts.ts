@@ -1,6 +1,6 @@
 import type { ShoppingCategory } from '../../types/state';
 import type { RackSegment } from './warehouseLayout';
-import { QUEST_SHELF_POSITIONS } from './warehouseLayout';
+import { QUEST_SHELF_POSITIONS, segmentLength } from './warehouseLayout';
 
 export type ProductKind = 'pallet' | 'bulkBox' | 'shrinkPack' | 'appliance';
 
@@ -52,14 +52,14 @@ export function generateDecoyProducts(rackSegments: RackSegment[]): DecoyProduct
   let id = 0;
 
   for (const seg of rackSegments) {
-    const length = seg.z1 - seg.z0;
+    const length = segmentLength(seg);
     const count = Math.max(1, Math.floor(length / 3.5));
-    const faceX = seg.x + seg.faceSide * (0.85 + 0.15);
+    const faceZ = seg.z + seg.faceSide * (0.85 + 0.15);
 
     for (let i = 0; i < count; i++) {
       if (rand() > 0.7) continue;
 
-      const pz = seg.z0 + 1.2 + (i + rand() * 0.4) * (length / count);
+      const px = seg.x0 + 1.2 + (i + rand() * 0.4) * (length / count);
       const tier = Math.floor(rand() * 3);
       const kind = pickKind(rand);
       const color = BOX_COLORS[Math.floor(rand() * BOX_COLORS.length)];
@@ -77,7 +77,7 @@ export function generateDecoyProducts(rackSegments: RackSegment[]): DecoyProduct
         d = 0.35;
       }
 
-      const px = faceX + seg.faceSide * (kind === 'pallet' ? 0.35 : 0.2);
+      const pz = faceZ + seg.faceSide * (kind === 'pallet' ? 0.35 : 0.2);
       if (nearQuest(px, pz)) continue;
 
       products.push({
@@ -91,7 +91,7 @@ export function generateDecoyProducts(rackSegments: RackSegment[]): DecoyProduct
         d,
         color,
         label: LABELS[Math.floor(rand() * LABELS.length)],
-        rotationY: seg.faceSide > 0 ? -Math.PI / 2 : Math.PI / 2,
+        rotationY: seg.faceSide > 0 ? 0 : Math.PI,
       });
     }
   }
