@@ -22,12 +22,12 @@ export function handleNpcCollision(
   cartLoad: number,
 ): void {
   if (performance.now() < spawnBumpGraceUntil) return;
-  const combined = playerSpeed + entitySpeed;
-  const rawForce = Math.max(Math.abs(playerSpeed - entitySpeed), combined * 0.4) * cartLoad;
-  const impactForce = Math.max(0.5, rawForce);
+  // Per mechanics.pseudocode §1: damage = f(relativeVelocity × cartLoad, 1, 15)
+  const relativeVelocity = Math.abs(playerSpeed - entitySpeed);
+  const impactForce = Math.max(MIN_IMPACT, relativeVelocity * cartLoad);
 
-  const scaled = mapRange(impactForce, MIN_IMPACT, MAX_IMPACT, 6, 18);
-  const damage = Math.max(6, scaled);
+  const scaled = mapRange(impactForce, MIN_IMPACT, MAX_IMPACT, 1, 15);
+  const damage = Math.round(Math.max(1, scaled));
 
   usePlayerStore.getState().damageMentalHealth(damage);
   useUIStore.getState().triggerBumpFeedback(damage);

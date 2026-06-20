@@ -9,6 +9,7 @@ interface UIStore {
   bumpFlash: number;
   healFlash: number;
   damagePulse: number;
+  lastDamageAmount: number;
   triggerBumpFeedback: (damage: number) => void;
   triggerSampleFeedback: (message: string) => void;
   triggerCheckoutStress: (message: string, flash?: number) => void;
@@ -26,6 +27,7 @@ export const useUIStore = create<UIStore>((set) => ({
   bumpFlash: 0,
   healFlash: 0,
   damagePulse: 0,
+  lastDamageAmount: 0,
 
   triggerBumpFeedback: (damage) => {
     const messages = [
@@ -42,6 +44,7 @@ export const useUIStore = create<UIStore>((set) => ({
       visionBlur: Math.min(8, damage * 0.45),
       bumpFlash: 1,
       damagePulse: Date.now(),
+      lastDamageAmount: damage,
       lastCollisionMessage: message,
     });
     window.setTimeout(() => {

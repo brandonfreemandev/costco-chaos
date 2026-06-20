@@ -11,7 +11,9 @@ export const WH_WIDTH = 34;
 export const WH_DEPTH = 56;
 export const WH_CEILING = 9;
 export const RACK_HEIGHT = 5.4;
-export const SPINE_DEPTH = 1.5;
+export const RACK_COLLISION_DEPTH = 1.05;
+/** Visual rack depth — matches RACK_COLLISION_DEPTH so visuals and hitboxes align. */
+export const SPINE_DEPTH = RACK_COLLISION_DEPTH;
 
 export const WH_MIN_X = -WH_WIDTH / 2;
 export const WH_MAX_X = WH_WIDTH / 2;
@@ -153,7 +155,6 @@ export function buildRackSegments(): RackSegment[] {
   return segments;
 }
 
-export const RACK_COLLISION_DEPTH = 1.05;
 const RACETRACK_RACK_INSET = 0.42;
 
 export interface RackCollisionBox {

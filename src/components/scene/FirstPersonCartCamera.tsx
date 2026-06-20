@@ -11,6 +11,9 @@ const PUSHER_OFFSET = 0.42;
 const BOB_AMPLITUDE = 0.026;
 const SHAKE_INTENSITY = 0.08;
 const SHAKE_DURATION = 0.18;
+/** Peak backward recoil distance (metres) on a max-damage bump. */
+const PUNCH_MAX = 0.14;
+const PUNCH_DECAY = 12; // exponential decay rate (higher = snappier return)
 
 /**
  * Camera-local offsets tuned to match a real Costco push POV:
@@ -31,9 +34,11 @@ export function FirstPersonCartCamera() {
   const bobRef = useRef<Group>(null);
   const bobPhase = useRef(0);
   const shakeTime = useRef(0);
+  const punchOffset = useRef(0);
   const lastDamagePulse = useRef(0);
   const phase = useGameStore((s) => s.phase);
   const damagePulse = useUIStore((s) => s.damagePulse);
+  const lastDamageAmount = useUIStore((s) => s.lastDamageAmount);
   const hasCart = phase === 'PARKING' || phase === 'SHOPPING' || phase === 'CHECKOUT';
 
   useFrame((_, delta) => {
@@ -43,9 +48,13 @@ export function FirstPersonCartCamera() {
       lastDamagePulse.current = damagePulse;
       if (damagePulse > 0) {
         shakeTime.current = SHAKE_DURATION;
+        // Scale punch by damage magnitude (lastDamageAmount 1–15)
+        const punchScale = Math.min(1, (lastDamageAmount ?? 6) / 15);
+        punchOffset.current = PUNCH_MAX * (0.4 + 0.6 * punchScale);
       }
     }
     shakeTime.current = Math.max(0, shakeTime.current - delta);
+    punchOffset.current = Math.max(0, punchOffset.current - punchOffset.current * PUNCH_DECAY * delta);
 
     const forwardX = -Math.sin(yaw);
     const forwardZ = -Math.cos(yaw);
@@ -61,14 +70,16 @@ export function FirstPersonCartCamera() {
     const shakeZ =
       (Math.sin(shakeTime.current * 53) + Math.cos(shakeTime.current * 97)) * shakeAmount * SHAKE_INTENSITY;
 
+    // Punch recoils opposite to forward (backward along travel direction)
+    const punch = punchOffset.current;
     if (hasCart) {
       camera.position.set(
-        position.x - forwardX * PUSHER_OFFSET + shakeX,
+        position.x - forwardX * PUSHER_OFFSET + shakeX + forwardX * punch,
         EYE_HEIGHT + bob + shakeY,
-        position.z - forwardZ * PUSHER_OFFSET + shakeZ,
+        position.z - forwardZ * PUSHER_OFFSET + shakeZ + forwardZ * punch,
       );
     } else {
-      camera.position.set(position.x + shakeX, EYE_HEIGHT + shakeY, position.z + shakeZ);
+      camera.position.set(position.x + shakeX + forwardX * punch, EYE_HEIGHT + shakeY, position.z + shakeZ + forwardZ * punch);
     }
     camera.rotation.set(0, yaw, 0, 'YXZ');
 

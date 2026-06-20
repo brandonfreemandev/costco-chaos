@@ -28,6 +28,6 @@ export function isNpcTouching(px: number, pz: number, nx: number, nz: number, ca
 export function applyNpcBumps(px: number, pz: number, playerSpeed: number): void {
   for (const npc of getActiveNpcRuntimes()) {
     if (!isNpcTouching(px, pz, npc.x, npc.z, npc.meta.cartLoad)) continue;
-    tryNpcProximityBump(npc.meta.npcId, Math.max(playerSpeed, 0.35), npc.speed, npc.meta.cartLoad);
+    tryNpcProximityBump(npc.meta.npcId, playerSpeed, npc.speed, npc.meta.cartLoad);
   }
 }
