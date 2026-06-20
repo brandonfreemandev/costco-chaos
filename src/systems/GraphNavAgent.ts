@@ -59,6 +59,10 @@ export class GraphNavAgent {
   private prevId: string | null = null;
   private targetId: string | null = null;
   private pauseUntil = 0;
+  private stuckAnchorX = 0;
+  private stuckAnchorZ = 0;
+  private stuckAnchorAt = 0;
+  private anchoredTarget: string | null = null;
   private orbitAngle: number;
   private orbitDir: number;
   private rngState: number;
@@ -241,8 +245,15 @@ export class GraphNavAgent {
       return this.result(target.x, target.z, speed, yaw, false, 'Patrol', this.currentId, net);
     }
 
+    this.trackAnchor(x, z, input.now);
     const inv = 1 / dist;
     const moved = this.slideMove(x, z, dx * inv * step, dz * inv * step);
+
+    if (this.wedged(moved.x, moved.z, input.now)) {
+      const home = this.retreatToNode(moved.x, moved.z);
+      return this.result(home.x, home.z, 0, null, true, 'Recover', this.currentId, net);
+    }
+
     return this.result(
       moved.x,
       moved.z,
@@ -268,6 +279,39 @@ export class GraphNavAgent {
     const moveHz = movingX ? shortH : longH;
     const r = resolveCartMove(x, z, mx, mz, getWarehouseObstacles(), moveHx, moveHz);
     return { x: r.x, z: r.z };
+  }
+
+  /** Re-anchor whenever the target changes, so wedge detection measures the
+   *  current leg, not a stale one. */
+  private trackAnchor(x: number, z: number, now: number): void {
+    if (this.anchoredTarget !== this.targetId) {
+      this.anchoredTarget = this.targetId;
+      this.stuckAnchorX = x;
+      this.stuckAnchorZ = z;
+      this.stuckAnchorAt = now;
+    }
+  }
+
+  /** True once the body has made no net headway for ~1s (jitter or hard wedge). */
+  private wedged(x: number, z: number, now: number): boolean {
+    const net = Math.hypot(x - this.stuckAnchorX, z - this.stuckAnchorZ);
+    if (net > 0.5) {
+      this.stuckAnchorX = x;
+      this.stuckAnchorZ = z;
+      this.stuckAnchorAt = now;
+      return false;
+    }
+    return now - this.stuckAnchorAt > 900;
+  }
+
+  /** Retreat to the nearest clear node and avoid re-picking the blocked edge. */
+  private retreatToNode(x: number, z: number): { x: number; z: number } {
+    this.prevId = this.targetId;
+    this.currentId = this.nearestNodeId(x, z);
+    this.targetId = null;
+    this.anchoredTarget = null;
+    const home = this.node(this.currentId);
+    return home ? { x: home.x, z: home.z } : { x, z };
   }
 
   private tickSwarm(
@@ -357,8 +401,15 @@ export class GraphNavAgent {
       );
     }
 
+    this.trackAnchor(x, z, input.now);
     const inv = 1 / dist;
     const moved = this.slideMove(x, z, dx * inv * step, dz * inv * step);
+
+    if (this.wedged(moved.x, moved.z, input.now)) {
+      this.retreatToNode(moved.x, moved.z);
+      return this.result(moved.x, moved.z, 0, null, true, 'Recover', this.currentId, net);
+    }
+
     return this.result(
       moved.x,
       moved.z,

@@ -54,7 +54,13 @@ export function CheckoutPanel() {
                   {lane.isOpen ? `${lane.customersAhead} waiting · ${totalInLine} in line` : 'CLOSED'}
                 </span>
                 {registerBusy && lane.isOpen && (
-                  <span className="lane-flag">{lane.priceCheckRemaining > 0 ? 'PRICE CHECK' : 'SCANNING'}</span>
+                  <span className="lane-flag">
+                    {lane.priceCheckLabel === 'COUPON DISPUTE'
+                      ? 'COUPON DISPUTE'
+                      : lane.priceCheckRemaining > 0
+                        ? 'PRICE CHECK'
+                        : 'SCANNING'}
+                  </span>
                 )}
               </div>
             );

@@ -1,10 +1,12 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
+import { Billboard, Text } from '@react-three/drei';
 import { RigidBody, type RapierRigidBody, interactionGroups } from '@react-three/rapier';
 import * as THREE from 'three';
 import { COLLISION_GROUP } from '../../types/state';
 import { registerNpc, unregisterNpc, updateNpcRuntime, type NpcPatrolAxis } from '../../systems/npcRegistry';
 import { useSampleStationStore } from '../../stores/sampleStationStore';
+import { useCartTransformStore } from '../../stores/cartTransformStore';
 import { useGameStore } from '../../stores/gameStore';
 import { getNpcObstacleExtents, getNpcMovementObstacles } from '../../systems/staticObstacles';
 import { NavAgent } from '../../systems/NavAgent';
@@ -38,11 +40,45 @@ function applyBodyHeading(body: RapierRigidBody, yaw: number): void {
   body.setRotation(new THREE.Quaternion().setFromEuler(new THREE.Euler(0, yaw, 0)), true);
 }
 
+/** Deadpan shopper name tags. Stable per NPC (seeded by id). */
+const NPC_FIRST_NAMES = [
+  'Greg', 'Karen', 'Doug', 'Linda', 'Brad', 'Sharon', 'Chad', 'Deb',
+  'Gary', 'Pam', 'Randy', 'Cheryl', 'Dale', 'Janet', 'Kevin', 'Sandra', 'Wayne', 'Bev',
+];
+const NPC_DESCRIPTORS = [
+  'Executive Member',
+  'Gold Star Member',
+  'here for the hot dog',
+  '84 rotisserie chickens',
+  'disputing a coupon',
+  'reads every label',
+  'knows the manager',
+  'returning a couch',
+  'samples professionally',
+  '12 cases of water',
+  'aggressively undecided',
+  'blocking the aisle',
+  'opinions about parking',
+  'membership expires today',
+  'price-checking everything',
+];
+/** Show a shopper's name tag only when the player is within this many meters. */
+const NAME_TAG_RANGE = 9;
+
+function npcDisplayName(seed: number): string {
+  const a = Math.abs(seed);
+  const first = NPC_FIRST_NAMES[a % NPC_FIRST_NAMES.length];
+  const desc = NPC_DESCRIPTORS[Math.floor(a / NPC_FIRST_NAMES.length) % NPC_DESCRIPTORS.length];
+  return `${first} · ${desc}`;
+}
+
 export function NPC({ config }: NPCProps) {
   const bodyRef = useRef<RapierRigidBody>(null);
   const agentRef = useRef<NavAgent | GraphNavAgent | null>(null);
+  const labelRef = useRef<THREE.Group>(null);
   const registered = useRef(false);
   const seed = hashSeed(config.id);
+  const displayName = useMemo(() => npcDisplayName(seed), [seed]);
 
   const skinTones = ['#e8c4a8', '#d4a574', '#c68642', '#f0d5be', '#8d5524'];
   const hairColors = ['#2a2018', '#5a4030', '#8a7060', '#1a1a22', '#6a5038', '#9098a0'];
@@ -125,6 +161,14 @@ export function NPC({ config }: NPCProps) {
       result.jittering,
       result.telemetry,
     );
+
+    // Only show the name tag for shoppers near the player — keeps the store readable.
+    const label = labelRef.current;
+    if (label) {
+      const pp = useCartTransformStore.getState().position;
+      const distToPlayer = Math.hypot(result.x - pp.x, result.z - pp.z);
+      label.visible = distToPlayer < NAME_TAG_RANGE;
+    }
   }, -1);
 
   const spawnWp = config.waypoints[0];
@@ -149,6 +193,20 @@ export function NPC({ config }: NPCProps) {
           hasCart={hasCart}
         />
       </group>
+
+      <Billboard ref={labelRef} position={[0, 1.4, 0]} visible={false}>
+        <Text
+          fontSize={0.15}
+          color="#eef3fa"
+          anchorX="center"
+          anchorY="middle"
+          outlineWidth={0.012}
+          outlineColor="#0b1220"
+          outlineOpacity={0.85}
+        >
+          {displayName}
+        </Text>
+      </Billboard>
     </RigidBody>
   );
 }

@@ -127,8 +127,25 @@ function isColumnEdgeWalkable(x: number, z0: number, z1: number): boolean {
   return isColumnPathWalkable(x, z0, z1);
 }
 
+/**
+ * Tight rack check for interior row edges. The full NODE_MARGIN check would
+ * reject the snug back-to-back gap rows, so use a small margin — enough to
+ * reject a row that clips a rack face (e.g. the front lane sits ~0.1m off the
+ * front rack) without killing the legitimate gap-center rows.
+ */
+function rowEdgeClearOfRacks(x0: number, z: number, x1: number): boolean {
+  for (let i = 0; i <= PATH_SAMPLES; i++) {
+    const t = i / PATH_SAMPLES;
+    const x = x0 + (x1 - x0) * t;
+    if (isInsideRackFootprint(x, z, 0.1)) return false;
+  }
+  return true;
+}
+
 function isInteriorRowEdgeWalkable(x0: number, z: number, x1: number): boolean {
-  return !segmentIntersectsKioskCore(x0, z, x1, z);
+  if (segmentIntersectsKioskCore(x0, z, x1, z)) return false;
+  if (!rowEdgeClearOfRacks(x0, z, x1)) return false;
+  return true;
 }
 
 function isPerimeterRowEdgeWalkable(x0: number, z: number, x1: number): boolean {

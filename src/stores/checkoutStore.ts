@@ -11,8 +11,10 @@ import {
   pickLaneSwitchRegretLine,
   pickLaneSwitchBaitLine,
   pickPriceCheckLine,
+  pickCouponDisputeLine,
   pickRushHourLine,
   PRICE_CHECK_SPIKE,
+  COUPON_DISPUTE_SPIKE,
 } from '../systems/checkoutStress';
 import { useGameStore } from './gameStore';
 import { usePlayerStore } from './playerStore';
@@ -27,6 +29,7 @@ export interface SimCheckoutLane {
   processingRemaining: number;
   priceCheckRemaining: number;
   priceCheckLabel: string | null;
+  couponDisputeRemaining: number;
 }
 
 interface CheckoutStore {
@@ -43,6 +46,8 @@ interface CheckoutStore {
   laneEventCooldown: number;
   rushCooldown: number;
   laneSwitchCount: number;
+  /** 0→1 advance animation per lane; 1 = fully advanced, reset to 0 on each queue pop */
+  laneAdvanceAnim: Record<string, number>;
   initLanes: () => void;
   tick: (dt: number, px: number, pz: number) => void;
   switchToLane: (laneId: string) => void;
@@ -59,7 +64,7 @@ function laneDepth(lane: SimCheckoutLane): number {
 }
 
 function isRegisterBusy(lane: SimCheckoutLane): boolean {
-  return lane.processingRemaining > 0 || lane.priceCheckRemaining > 0;
+  return lane.processingRemaining > 0 || lane.priceCheckRemaining > 0 || lane.couponDisputeRemaining > 0;
 }
 
 function pickMedianLane(lanes: SimCheckoutLane[]): SimCheckoutLane {
@@ -74,13 +79,24 @@ function estimateWait(lane: SimCheckoutLane, slotsFromFront: number): number {
 }
 
 function startTransaction(lane: SimCheckoutLane): void {
-  if (Math.random() < 0.18) {
+  const roll = Math.random();
+  if (roll < 0.18) {
     lane.priceCheckRemaining = 4 + Math.random() * 6;
     lane.priceCheckLabel = 'PRICE CHECK';
+    lane.couponDisputeRemaining = 0;
+    return;
+  }
+  if (roll < 0.30) {
+    // Coupon dispute: 3× base delay (per mechanics.pseudocode §3)
+    const baseDelay = (1.8 + Math.random() * 1.4) / lane.cashierSpeed;
+    lane.couponDisputeRemaining = baseDelay * 3;
+    lane.processingRemaining = 0;
+    lane.priceCheckLabel = 'COUPON DISPUTE';
     return;
   }
   const load = 1.8 + Math.random() * 1.4;
   lane.processingRemaining = load / lane.cashierSpeed;
+  lane.couponDisputeRemaining = 0;
   lane.priceCheckLabel = null;
 }
 
@@ -88,6 +104,7 @@ function finishRegisterTransaction(
   lane: SimCheckoutLane,
   playerLaneId: string | null,
   slotsFromFront: number,
+  advanceAnim: Record<string, number>,
 ): number {
   let nextSlots = slotsFromFront;
   if (lane.id === playerLaneId && nextSlots > 0) {
@@ -95,6 +112,7 @@ function finishRegisterTransaction(
   }
   if (lane.customersAhead > 0) {
     lane.customersAhead -= 1;
+    advanceAnim[lane.id] = 0; // trigger advance animation
     startTransaction(lane);
   }
   return nextSlots;
@@ -137,6 +155,7 @@ function buildInitialLanes(): SimCheckoutLane[] {
       processingRemaining: 0,
       priceCheckRemaining: 0,
       priceCheckLabel: null,
+      couponDisputeRemaining: 0,
     };
     if (lane.isOpen) {
       startTransaction(lane);
@@ -181,6 +200,7 @@ export const useCheckoutStore = create<CheckoutStore>((set, get) => ({
   laneEventCooldown: 24,
   rushCooldown: 18,
   laneSwitchCount: 0,
+  laneAdvanceAnim: {},
 
   initLanes: () => {
     if (get().lanes.length > 0) return;
@@ -188,6 +208,9 @@ export const useCheckoutStore = create<CheckoutStore>((set, get) => ({
     const lanes = buildInitialLanes();
     const start = pickMedianLane(lanes);
     const slots = laneDepth(start);
+    const initAnim: Record<string, number> = {};
+    lanes.forEach((l) => { initAnim[l.id] = 1; });
+
     set({
       lanes,
       playerLaneId: start.id,
@@ -201,6 +224,7 @@ export const useCheckoutStore = create<CheckoutStore>((set, get) => ({
       laneEventCooldown: 24,
       rushCooldown: 16 + Math.random() * 10,
       laneSwitchCount: 0,
+      laneAdvanceAnim: initAnim,
       lastEvent: `Lane ${start.id} — ${slots} carts ahead. No lane is empty. Press 1–6 wisely.`,
     });
   },
@@ -274,6 +298,11 @@ export const useCheckoutStore = create<CheckoutStore>((set, get) => ({
       state;
     let laneEventCooldown = state.laneEventCooldown - dt;
     let rushCooldown = state.rushCooldown - dt;
+    const advanceAnim: Record<string, number> = { ...state.laneAdvanceAnim };
+    const ANIM_SPEED = 1 / 0.65; // fully advance in 0.65s
+    for (const id of Object.keys(advanceAnim)) {
+      advanceAnim[id] = Math.min(1, (advanceAnim[id] ?? 1) + dt * ANIM_SPEED);
+    }
 
     if (rushCooldown <= 0 && !beingServed) {
       rushRandomLanes(lanes, 2 + Math.floor(Math.random() * 2));
@@ -284,13 +313,29 @@ export const useCheckoutStore = create<CheckoutStore>((set, get) => ({
     for (const lane of lanes) {
       const prevPc = prevPriceCheckRemaining.get(lane.id) ?? 0;
       if (lane.priceCheckRemaining > 0 && prevPc <= 0 && lane.id === playerLaneId && slotsFromFront <= 1) {
-        const line = pickPriceCheckLine();
-        applyCheckoutDamage(PRICE_CHECK_SPIKE, line, 0.9);
+        const isDispute = lane.priceCheckLabel === 'COUPON DISPUTE';
+        const line = isDispute ? pickCouponDisputeLine() : pickPriceCheckLine();
+        const spike = isDispute ? COUPON_DISPUTE_SPIKE : PRICE_CHECK_SPIKE;
+        applyCheckoutDamage(spike, line, 0.9);
         lastEvent = line;
       }
       prevPriceCheckRemaining.set(lane.id, lane.priceCheckRemaining);
 
       if (!lane.isOpen || (beingServed && lane.id === playerLaneId)) continue;
+
+      // Coupon dispute timer (uses priceCheckRemaining slot for display)
+      if (lane.couponDisputeRemaining > 0) {
+        lane.couponDisputeRemaining = Math.max(0, lane.couponDisputeRemaining - dt);
+        lane.priceCheckRemaining = lane.couponDisputeRemaining; // drive the busy indicator
+        if (lane.couponDisputeRemaining === 0) {
+          lane.priceCheckRemaining = 0;
+          lane.priceCheckLabel = null;
+          if (lane.customersAhead > 0) {
+            startTransaction(lane);
+          }
+        }
+        continue;
+      }
 
       if (lane.priceCheckRemaining > 0) {
         lane.priceCheckRemaining = Math.max(0, lane.priceCheckRemaining - dt);
@@ -306,7 +351,7 @@ export const useCheckoutStore = create<CheckoutStore>((set, get) => ({
       if (lane.processingRemaining > 0) {
         lane.processingRemaining = Math.max(0, lane.processingRemaining - dt);
         if (lane.processingRemaining === 0) {
-          slotsFromFront = finishRegisterTransaction(lane, playerLaneId, slotsFromFront);
+          slotsFromFront = finishRegisterTransaction(lane, playerLaneId, slotsFromFront, advanceAnim);
         }
         continue;
       }
@@ -387,6 +432,7 @@ export const useCheckoutStore = create<CheckoutStore>((set, get) => ({
       laneEventCooldown,
       rushCooldown,
       laneSwitchCount,
+      laneAdvanceAnim: advanceAnim,
     });
   },
 
@@ -406,6 +452,7 @@ export const useCheckoutStore = create<CheckoutStore>((set, get) => ({
       laneEventCooldown: 24,
       rushCooldown: 18,
       laneSwitchCount: 0,
+      laneAdvanceAnim: {},
     });
   },
 }));

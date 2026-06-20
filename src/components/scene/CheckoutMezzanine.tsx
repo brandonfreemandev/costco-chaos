@@ -12,6 +12,7 @@ import {
   CHECKOUT_BELT_ORIGIN_Z,
   CHECKOUT_MEZZANINE,
   MAX_VISIBLE_QUEUE,
+  QUEUE_SLOT_SPACING,
   queueSlotZ,
 } from './checkoutLayout';
 import { CashierAvatar, ShopperAvatar, cashierLook, queueNpcLook } from './ShopperAvatar';
@@ -282,6 +283,7 @@ export function CheckoutMezzanine() {
   const playerLaneId = useCheckoutStore((s) => s.playerLaneId);
   const slotsFromFront = useCheckoutStore((s) => s.slotsFromFront);
   const beingServed = useCheckoutStore((s) => s.beingServed);
+  const laneAdvanceAnim = useCheckoutStore((s) => s.laneAdvanceAnim);
   const active = shoppingListComplete || phase === 'CHECKOUT';
 
   const { minZ, maxZ } = CHECKOUT_MEZZANINE;
@@ -360,10 +362,13 @@ export function CheckoutMezzanine() {
               (() => {
                 const totalInLine = customersAhead + (registerBusy ? 1 : 0);
                 const visible = Math.min(totalInLine, MAX_VISIBLE_QUEUE);
+                // anim: 0 = just advanced (NPCs at old Z), 1 = fully settled (NPCs at new Z)
+                const anim = laneAdvanceAnim[laneId] ?? 1;
+                const slideOffset = (1 - anim) * QUEUE_SLOT_SPACING;
                 return Array.from({ length: visible }).map((_, q) => {
                   const look = queueNpcLook(laneId, q);
                   return (
-                    <group key={`q-${q}`} position={[CUSTOMER_SIDE_X, 0, queueSlotZ(q)]} rotation={[0, 0, 0]}>
+                    <group key={`q-${q}`} position={[CUSTOMER_SIDE_X, 0, queueSlotZ(q) - slideOffset]} rotation={[0, 0, 0]}>
                       <ShopperAvatar
                         shirtColor={look.shirt}
                         skinTone={look.skin}

@@ -1,6 +1,19 @@
-/** Satirical checkout stress copy — price checks, lane chaos, queue drain. */
+/** Satirical checkout stress copy — price checks, coupon disputes, lane chaos, queue drain. */
 
 export const PRICE_CHECK_SPIKE = 9;
+export const COUPON_DISPUTE_SPIKE = 7;
+
+export const COUPON_DISPUTE_LINES = [
+  'COUPON DISPUTE — "I printed this from 2009 — it should still work."',
+  'COUPON DISPUTE — cashier summoning a supervisor from the break room.',
+  'COUPON DISPUTE — "The app said 15% off. The app lied."',
+  'COUPON DISPUTE — executive member insists the price is wrong on everything.',
+  'COUPON DISPUTE — three coupons, two managers, one audible sigh.',
+] as const;
+
+export function pickCouponDisputeLine(): string {
+  return COUPON_DISPUTE_LINES[Math.floor(Math.random() * COUPON_DISPUTE_LINES.length)];
+}
 
 export const PRICE_CHECK_LINES = [
   'PRICE CHECK — auditor squints at your rotisserie.',
