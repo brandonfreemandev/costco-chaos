@@ -144,7 +144,7 @@ function drawSkuLabel(
 
 function createDeptTexture(dept: CenterRackDept): THREE.CanvasTexture {
   const { bg, shelf, colors, gloss, kirkland, seasonal } = PALETTES[dept];
-  const size = 512;
+  const size = 1024;
   const canvas = document.createElement('canvas');
   canvas.width = size;
   canvas.height = size;
@@ -160,8 +160,9 @@ function createDeptTexture(dept: CenterRackDept): THREE.CanvasTexture {
     ctx.fillStyle = shelf;
     ctx.fillRect(0, y0 + bandH - 5, size, 5);
 
-    const cols =
-      dept === 'bulkPaper' ? 4 : dept === 'grocery' || dept === 'household' ? 5 : dept === 'electronics' ? 3 : 5;
+    // Fewer columns → wider cells → comedy names need less horizontal squishing.
+    // Electronics (3) reads cleanest; keep the rest at 4.
+    const cols = dept === 'electronics' ? 3 : 4;
     const cellW = size / cols;
 
     for (let col = 0; col < cols; col++) {
@@ -217,7 +218,8 @@ function createDeptTexture(dept: CenterRackDept): THREE.CanvasTexture {
   tex.wrapS = THREE.RepeatWrapping;
   tex.wrapT = THREE.RepeatWrapping;
   tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = 4;
+  // High anisotropy keeps facade text legible at the grazing angles you see down an aisle.
+  tex.anisotropy = 16;
   return tex;
 }
 
