@@ -2,6 +2,7 @@ import { useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import {
   buildRackVisualChunks,
+  buildRacetrackGapVisualChunks,
   RACK_HEIGHT,
   SPINE_DEPTH,
   type CenterRackDept,
@@ -80,7 +81,11 @@ function DepartmentWallpaper({
 }
 
 export function ShelfWallpaper() {
-  const allChunks = useMemo(() => buildRackVisualChunks(), []);
+  // Include racetrack-gap fillers so far-end inner rack faces aren't bare steel.
+  const allChunks = useMemo(
+    () => [...buildRackVisualChunks(), ...buildRacetrackGapVisualChunks()],
+    [],
+  );
 
   return (
     <>
