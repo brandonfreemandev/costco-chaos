@@ -33,3 +33,6 @@ api/chat.php
 api/ollama-key.local.php
 public/ollama-proxy.php
 public/ollama-key.local.php
+
+# Local Claude Code tooling (preview launch config)
+.claude/

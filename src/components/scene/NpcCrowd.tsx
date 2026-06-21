@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useCartTransformStore } from '../../stores/cartTransformStore';
+import { useUIStore } from '../../stores/uiStore';
 import { NPC, type NPCConfig } from './NPC';
 
 const CHECK_MS = 180;
@@ -24,6 +25,7 @@ export function NpcCrowd({
   enabled = true,
   alwaysActive = false,
 }: NpcCrowdProps) {
+  const godMode = useUIStore((s) => s.godMode);
   const configMap = useMemo(() => new Map(configs.map((c) => [c.id, c])), [configs]);
   const anchors = useMemo(
     () =>
@@ -97,6 +99,9 @@ export function NpcCrowd({
     activeRef.current = next;
     setActiveIds([...next]);
   });
+
+  // God mode — remove every NPC from the scene.
+  if (godMode) return null;
 
   return (
     <>

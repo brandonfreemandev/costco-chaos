@@ -14,6 +14,7 @@ export function GameSidebar() {
   const lastCollisionMessage = useUIStore((s) => s.lastCollisionMessage);
   const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed);
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
+  const godMode = useUIStore((s) => s.godMode);
 
   if (phase === 'MENU') return null;
 
@@ -44,6 +45,7 @@ export function GameSidebar() {
               <div className="brand-subtitle">{phaseLabel}</div>
             </div>
           </div>
+          {godMode && <div className="god-mode-badge">⚡ GOD MODE</div>}
         </header>
 
         <div className="sidebar-scroll">
@@ -100,6 +102,7 @@ export function GameSidebar() {
             <span>A/D Steer</span>
             <span>1–6 Lanes</span>
             <span>I Skip inside</span>
+            <span>G God mode</span>
             {phase === 'SHOPPING' && <span>O Test checkout</span>}
           </div>
         </footer>

@@ -47,10 +47,11 @@ function pickColor(colors: string[], row: number, col: number): string {
 }
 
 function drawKirklandBand(ctx: CanvasRenderingContext2D, bx: number, by: number, bw: number, bh: number) {
+  // Stop at 72% so the label strip (bottom 26%) stays clean
   ctx.fillStyle = '#005dab';
-  ctx.fillRect(bx, by + bh * 0.62, bw, bh * 0.14);
+  ctx.fillRect(bx, by + bh * 0.60, bw, bh * 0.07);
   ctx.fillStyle = '#e11d48';
-  ctx.fillRect(bx, by + bh * 0.76, bw, bh * 0.1);
+  ctx.fillRect(bx, by + bh * 0.67, bw, bh * 0.05);
 }
 
 function drawTvSilhouette(ctx: CanvasRenderingContext2D, bx: number, by: number, bw: number, bh: number) {
@@ -70,64 +71,80 @@ function drawSeasonalTag(ctx: CanvasRenderingContext2D, bx: number, by: number, 
   ctx.fillText('DEAL', bx + bw * 0.06, by + bh * 0.2);
 }
 
-const SKU_LABELS: Record<CenterRackDept, string[]> = {
+// Two lines only: name then price — keeps the label strip tight
+const SKU_LABELS: Record<CenterRackDept, [string, string][]> = {
   electronics: [
-    'TV 85" 4K\n$1,299.99', 'HDMI 48-Pack\n$34.99', 'Laptop Sleeve\n(No Laptop)\n$49.99',
-    'Smart Speaker\nListening\n$79.99', 'Charging Cable\n6-Pack\n$22.99', 'Webcam\nJudging You\n$89.99',
-    'Bluetooth\nEarbuds 3-Pack\n$129.99', 'Surge Protector\n12-Outlet\n$39.99',
+    ['85" TV (Too Big)', '$1,299.99'], ['HDMI 48-Pack (Why)', '$34.99'], ['Laptop Sleeve (No Laptop)', '$49.99'],
+    ['Smart Speaker (Listening)', '$79.99'], ['Charging Cable (Finally)', '$22.99'], ['Webcam (Judging You)', '$89.99'],
+    ['BT Earbuds (3 Losers)', '$129.99'], ['Surge Protector (False Hope)', '$39.99'],
+    ['Keyboard (Rage-Proof)', '$59.99'], ['Router (False Promises)', '$129.99'],
+    ['Extension Cord (Trip Hazard)', '$19.99'], ['Monitor Arm (Hubris)', '$79.99'],
   ],
   seasonal: [
-    'Inflatable\nSanta 9ft\n$89.99', 'Emergency\nXmas Lights\n$24.99', 'Patio Set\n(Wrong Season)\n$499.99',
-    'Leaf Blower\n(Good Luck)\n$149.99', 'Pool Float\nNov–Jan\n$19.99', 'Fire Pit\nAssembly\nRequired\n$229.99',
-    'Garden Hose\n150ft\n$59.99', 'Umbrella\n11ft\n$179.99',
+    ['Inflatable Santa (9ft Regret)', '$89.99'], ['Xmas Lights (Fire Hazard)', '$24.99'],
+    ['Patio Set (One Summer)', '$499.99'], ['Leaf Blower (Neighbor War)', '$149.99'],
+    ['Pool Float (False Optimism)', '$19.99'], ['Fire Pit (HOA Violation)', '$229.99'],
+    ['Garden Hose (150ft Grudge)', '$59.99'], ['Patio Umbrella (It Will Fall)', '$179.99'],
+    ['Inflatable Reindeer (Haunted)', '$39.99'], ['String Lights (Tangle Forever)', '$29.99'],
+    ['Yard Stakes (Good Luck)', '$14.99'], ['Outdoor Rug (Mold Eventually)', '$89.99'],
   ],
   grocery: [
-    'Kirkland\nOlive Oil\n2.4L\n$19.99', 'Pretzel Crisps\n3.5 lb\n$8.99', 'Mixed Nuts\n40 oz\n$18.99',
-    'Sparkling\nWater 48-Pack\n$22.99', 'Granola Bars\n64-Count\n$14.99', 'Kirkland\nCoffee\n3 lb\n$22.99',
-    'Mac & Cheese\n18-Pack\n$12.99', 'Pasta Sauce\n6-Jars\n$11.99', 'Protein Bars\n30-Count\n$28.99',
+    ['KS Olive Oil (Hubris Qty)', '$19.99'], ['Pretzel Crisps (Gone Tonight)', '$8.99'],
+    ['Mixed Nuts (Mostly Cashews Liar)', '$18.99'], ['Sparkling Water (Fancy Nothing)', '$22.99'],
+    ['Granola Bars (Sadness Bricks)', '$14.99'], ['KS Coffee (Mortgage Blend)', '$22.99'],
+    ['Mac & Cheese 18pk (Ambitions)', '$12.99'], ['Pasta Sauce (6 Jars of Denial)', '$11.99'],
+    ['Protein Bars (Gym Guilt)', '$28.99'], ['KS Maple Syrup (Pancake Aspirations)', '$13.99'],
+    ['Trail Mix (Optimism)', '$16.99'], ['Chicken Broth 6pk (Healing Era)', '$11.99'],
   ],
   household: [
-    'Dish Soap\n4-Pack\n$12.99', 'Laundry Pods\n152-Count\n$24.99', 'Paper Towels\n12 Mega\n$22.99',
-    'Trash Bags\n200-Count\n$19.99', 'Ziploc Bags\nEvery Size\n$18.99', 'Spray Cleaner\n3-Pack\n$13.99',
-    'Sponges\n24-Count\n$9.99', 'Aluminum Foil\n1,000 sq ft\n$24.99',
+    ['Dish Soap 4pk (Eternal)', '$12.99'], ['Laundry Pods (Do Not Eat)', '$24.99'],
+    ['Paper Towels (Biblical Qty)', '$22.99'], ['Trash Bags (Life Metaphor)', '$19.99'],
+    ['Ziploc (Every Size Somehow)', '$18.99'], ['Spray Cleaner (Optimism Mist)', '$13.99'],
+    ['Sponges 24ct (You Will Lose)', '$9.99'], ['Aluminum Foil (Paranoia Kit)', '$24.99'],
+    ['Dish Gloves (False Dignity)', '$8.99'], ['Air Freshener (Covering Crimes)', '$14.99'],
+    ['Lint Roller (Dog Tax)', '$11.99'], ['Dryer Sheets (Static Anxiety)', '$16.99'],
   ],
   bulkPaper: [
-    'Kirkland\nBath Tissue\n30 Rolls\n$24.99', 'Paper Plates\n500-Count\n$19.99',
-    'Napkins\n1,000-Count\n$16.99', 'Facial Tissue\n12 Boxes\n$18.99',
-    'Kirkland\nPaper Towels\n160 Sheets\n$22.99', 'Parchment\nPaper 205ft\n$12.99',
+    ['KS Bath Tissue (Prepare)', '$24.99'], ['Paper Plates (Commitment Issues)', '$19.99'],
+    ['Napkins 1000ct (For Crying)', '$16.99'], ['Facial Tissue (Cry Cubes)', '$18.99'],
+    ['KS Paper Towels (Accept It)', '$22.99'], ['Parchment Paper (Chef Delusion)', '$12.99'],
+    ['Wax Paper (Retro Anxiety)', '$9.99'], ['Plastic Wrap (Sisyphean Task)', '$14.99'],
   ],
 };
 
 function drawSkuLabel(
   ctx: CanvasRenderingContext2D,
-  bx: number, by: number, bw: number, bh: number,
+  bx: number, by: number, bw: number, lh: number,
   dept: CenterRackDept, row: number, col: number,
 ) {
   const labels = SKU_LABELS[dept];
-  const label = labels[(row * 7 + col * 3) % labels.length];
-  const lines = label.split('\n');
+  // Scramble so neighbouring cells rarely share a label
+  const hash = (row * 31 + col * 17 + row * col * 7) % labels.length;
+  const [name, price] = labels[hash];
 
-  const fontSize = Math.max(6, Math.floor(bw / 7));
-  ctx.font = `bold ${fontSize}px sans-serif`;
+  // Fit two lines inside lh: each line gets ~45% of strip height
+  const fontSize = Math.max(4, Math.floor(lh * 0.4));
+  const cx = bx + bw / 2;
+  const line1Y = by + fontSize;
+  const line2Y = by + lh - 2;
+
+  const maxW = bw - 4;
+
   ctx.textAlign = 'center';
+  ctx.font = `500 ${fontSize}px sans-serif`;
+  ctx.fillStyle = 'rgba(0,0,0,0.78)';
+  ctx.fillText(name, cx, line1Y, maxW);
 
-  const lineH = fontSize * 1.25;
-  const totalH = lines.length * lineH;
-  let ty = by + (bh - totalH) / 2 + fontSize * 0.85;
+  ctx.font = `bold ${fontSize}px sans-serif`;
+  ctx.fillStyle = '#c00';
+  ctx.fillText(price, cx, line2Y, maxW);
 
-  for (let i = 0; i < lines.length; i++) {
-    const isPrice = lines[i].startsWith('$');
-    ctx.fillStyle = isPrice ? '#c00' : 'rgba(0,0,0,0.82)';
-    if (isPrice) ctx.font = `bold ${fontSize + 1}px sans-serif`;
-    else ctx.font = `${i === 0 ? 'bold' : 'normal'} ${fontSize}px sans-serif`;
-    ctx.fillText(lines[i], bx + bw / 2, ty + i * lineH);
-  }
   ctx.textAlign = 'left';
 }
 
 function createDeptTexture(dept: CenterRackDept): THREE.CanvasTexture {
   const { bg, shelf, colors, gloss, kirkland, seasonal } = PALETTES[dept];
-  const size = 256;
+  const size = 512;
   const canvas = document.createElement('canvas');
   canvas.width = size;
   canvas.height = size;
@@ -185,11 +202,14 @@ function createDeptTexture(dept: CenterRackDept): THREE.CanvasTexture {
         ctx.fillRect(bx + bw * 0.15, by + bh * 0.1, bw * 0.35, bh * 0.75);
       }
 
-      // White label strip at bottom of each cell
-      const labelH = Math.max(10, bh * 0.32);
-      ctx.fillStyle = 'rgba(255,255,255,0.88)';
-      ctx.fillRect(bx, by + bh - labelH, bw, labelH);
-      drawSkuLabel(ctx, bx, by + bh - labelH, bw, labelH, dept, row, col);
+      // Label strip — light gray so it reads on both dark and light cell backgrounds
+      const labelH = Math.max(10, Math.floor(bh * 0.26));
+      const labelY = by + bh - labelH;
+      ctx.fillStyle = '#e8e6e0';
+      ctx.fillRect(bx, labelY, bw, labelH);
+      ctx.fillStyle = 'rgba(0,0,0,0.45)';
+      ctx.fillRect(bx, labelY, bw, 1.5);
+      drawSkuLabel(ctx, bx, labelY + 2, bw, labelH - 2, dept, row, col);
     }
   }
 

@@ -1,5 +1,6 @@
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
+import { compression } from 'vite-plugin-compression2';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -68,8 +69,16 @@ function watchdogLogger(): Plugin {
 }
 
 export default defineConfig({
-  base: '/costco-chaos/',
-  plugins: [react(), watchdogLogger()],
+  // Cloudflare Pages / Netlify serve at root; InfinityFree serves under /costco-chaos/.
+  // Override with VITE_BASE=/ for root-hosted deploys.
+  base: process.env.VITE_BASE ?? '/costco-chaos/',
+  plugins: [
+    react(),
+    watchdogLogger(),
+    // Pre-compress build output so hosts serve ~1MB instead of 3.5MB.
+    // Emits .gz and .br alongside each asset > 1KB; .htaccess serves them.
+    compression({ algorithms: ['gzip', 'brotliCompress'], threshold: 1024 }),
+  ],
   server: {
     port: 5173,
     strictPort: true,

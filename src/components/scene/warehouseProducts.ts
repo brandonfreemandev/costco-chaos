@@ -107,6 +107,7 @@ export const QUEST_PRODUCT_VISUALS: Record<
   bakery: { kind: 'bulkBox', w: 0.8, h: 0.55, d: 0.8, color: '#d4a574', label: 'MUFFINS 24CT' },
   electronics: { kind: 'appliance', w: 1.15, h: 0.9, d: 0.3, color: '#1a1a22', label: '65" TV' },
   bulkPaper: { kind: 'pallet', w: 0.95, h: 1.05, d: 0.95, color: '#f0ebe3', label: 'TISSUE 30RL' },
+  bonus: { kind: 'bulkBox', w: 0.7, h: 0.4, d: 0.6, color: '#c0c0c0', label: 'BONUS ITEM' },
 };
 
 export const SHELF_INSET_X = 3.2;

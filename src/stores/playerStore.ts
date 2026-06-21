@@ -21,7 +21,7 @@ const SHOPPING_ITEMS: ShoppingListItem[] = [
   {
     id: 'item-meat',
     sku: '482910',
-    name: 'Rotisserie Chicken Emergency Pack (3 x 12lb)',
+    name: 'Emergency Chicken 48lb (Kirkland Brand, Probably)',
     aisle: 'Aisle 501 (Meat)',
     category: 'meat',
     collected: false,
@@ -69,6 +69,7 @@ function buildInventory() {
       bakery: false,
       electronics: false,
       bulkPaper: false,
+      bonus: false,
     },
   };
 }

@@ -7,48 +7,48 @@ import { useUIStore } from '../../stores/uiStore';
 // ── Stat commentary ──────────────────────────────────────────────────────────
 
 function bumpComment(n: number): string {
-  if (n === 0) return 'You touched no one. Suspicious.';
-  if (n <= 3) return 'Minimal casualties. Respectable.';
-  if (n <= 8) return 'Statistically normal Costco violence.';
-  if (n <= 15) return 'You were the hazard.';
-  return 'You were the Aggressor.';
+  if (n === 0) return 'You touched no one. Suspiciously efficient.';
+  if (n <= 3) return 'Minimal casualties. A model citizen.';
+  if (n <= 8) return 'Statistically normal Costco violence. Acceptable.';
+  if (n <= 15) return 'You were the primary hazard.';
+  return 'You were the Aggressor. Membership revoked.';
 }
 
 function mhComment(mh: number): string {
-  if (mh >= 80) return "You're fine. Genuinely fine. Weird.";
-  if (mh >= 55) return 'Functional. Barely, but still.';
-  if (mh >= 30) return 'Technically survived. Emotionally? Unclear.';
-  if (mh >= 10) return 'You needed a sample and you know it.';
-  return 'You crossed the finish line on fumes and spite.';
+  if (mh >= 80) return "You're fine. Genuinely fine. This is unnatural.";
+  if (mh >= 55) return 'Functional. Barely. A triumph of will.';
+  if (mh >= 30) return 'Technically survived. Emotionally? A void.';
+  if (mh >= 10) return 'You needed a sample. You needed several.';
+  return 'You crossed the finish line on fumes and pure, unadulterated spite.';
 }
 
 function laneComment(n: number): string {
   if (n === 0) return 'You stayed put. Bold. Possibly delusional.';
-  if (n <= 2) return `${n} switch${n > 1 ? 'es' : ''}. One regret, manageable.`;
-  if (n <= 4) return `${n} switches. Lane optimist. Adorable.`;
-  return `${n} switches. You re-entered the queue more times than you checked items.`;
+  if (n <= 2) return `${n} switch${n > 1 ? 'es' : ''}. One regret. Manageable.`;
+  if (n <= 4) return `${n} switches. Lane optimist. Adorable. Naive.`;
+  return `${n} switches. You re-entered the queue more times than you checked items. A tragedy.`;
 }
 
 function sampleComment(n: number): string {
-  if (n === 0) return 'You left free MH on the table. Rookie move.';
-  if (n === 1) return 'One sample. The bare minimum of self-care.';
-  if (n === 2) return 'Strategic. The sample is free therapy.';
-  return 'You circled the store for samples. Understandable. No judgment.';
+  if (n === 0) return 'You left free MH on the table. Rookie move. Shameful.';
+  if (n === 1) return 'One sample. The bare minimum of self-care. Barely.';
+  if (n === 2) return 'Strategic. The sample is free therapy. Efficient.';
+  return 'You circled the store for samples. Understandable. We\'ve all been there.';
 }
 
 function membershipTier(mh: number, bumps: number): string {
-  if (mh >= 70 && bumps <= 4) return 'Gold Star Survivor';
-  if (mh >= 50) return 'Executive Member (Barely)';
-  if (mh >= 25) return 'Standard Member (Emotionally)';
-  if (mh >= 10) return 'Emotional Support Member';
-  return 'The Cart Was Pushing You';
+  if (mh >= 70 && bumps <= 4) return 'Gold Star Survivor (Platinum Patience)';
+  if (mh >= 50) return 'Executive Member (Barely Functional)';
+  if (mh >= 25) return 'Standard Member (Emotionally Compromised)';
+  if (mh >= 10) return 'Emotional Support Member (In Need of Support)';
+  return 'The Cart Was Pushing You (Total Collapse)';
 }
 
 function loseVerdict(bumps: number, samples: number): string {
-  if (bumps >= 12) return 'Aggravated cart-on-cart violence.';
-  if (samples === 0) return 'Insufficient sample consumption.';
-  if (bumps === 0) return 'Stood still. The line won.';
-  return 'Overwhelmed by normal Costco conditions.';
+  if (bumps >= 12) return 'Aggravated cart-on-cart violence. A public hazard.';
+  if (samples === 0) return 'Insufficient sample consumption. A waste of a trip.';
+  if (bumps === 0) return 'Stood still. The line won. Total surrender.';
+  return 'Overwhelmed by normal Costco conditions. Standard outcome.';
 }
 
 function receiptTotal(): string {

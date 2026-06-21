@@ -5,11 +5,12 @@ export interface ChatMessage {
 
 const MODEL = 'gemma4:31b-cloud';
 
-// Absolute URL so Vite's base path doesn't affect it.
+// Same-origin proxy. Follows Vite's base path automatically:
+//   Cloudflare/root  → /ollama-api          (handled by _worker.js)
+//   InfinityFree     → /costco-chaos/ollama-api (handled by ollama-proxy.php)
 // VITE_CHAT_PROXY_URL overrides for local dev (node scripts/dev-proxy.js).
-// Matches TDZZZ structure: .htaccess + chat.php at costco-chaos/ root.
 const PROXY_BASE = import.meta.env.VITE_CHAT_PROXY_URL
-  ?? `${window.location.origin}/costco-chaos/ollama-api`;
+  ?? `${window.location.origin}${import.meta.env.BASE_URL}ollama-api`;
 
 const SPOUSE_SYSTEM_PROMPT = `You are the spouse of someone currently doing a solo Costco run.
 You always sign off or refer to yourself endearingly — never use a name, just "babe", "hon", or "love".

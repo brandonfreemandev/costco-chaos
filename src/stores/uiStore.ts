@@ -6,6 +6,8 @@ interface UIStore {
   sidebarCollapsed: boolean;
   /** DEV: walkability graph overlay — off until H pressed */
   walkGraphVisible: boolean;
+  /** God mode — removes all NPCs. Toggled with G. */
+  godMode: boolean;
   bumpFlash: number;
   healFlash: number;
   damagePulse: number;
@@ -17,6 +19,7 @@ interface UIStore {
   toggleSidebar: () => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
   toggleWalkGraph: () => void;
+  toggleGodMode: () => void;
 }
 
 export const useUIStore = create<UIStore>((set) => ({
@@ -24,6 +27,7 @@ export const useUIStore = create<UIStore>((set) => ({
   lastCollisionMessage: null,
   sidebarCollapsed: false,
   walkGraphVisible: false,
+  godMode: false,
   bumpFlash: 0,
   healFlash: 0,
   damagePulse: 0,
@@ -37,6 +41,7 @@ export const useUIStore = create<UIStore>((set) => ({
       `Cart karma strikes. Mental health −${d}`,
       `Executive member energy? Mental health −${d}`,
       `Sample lady judges you. Mental health −${d}`,
+      `Sample lady judged your cart. Mental health −${d}`,
       `Bulk shopper detected. Mental health −${d}`,
       `Your cart has opinions. Mental health −${d}`,
       `You grazed a 48-pack of paper towels. Mental health −${d}`,
@@ -50,12 +55,18 @@ export const useUIStore = create<UIStore>((set) => ({
       `The PA system noticed. Mental health −${d}`,
       `Cart-on-cart violence in aisle 7. Mental health −${d}`,
       `Your executive membership does not protect you here. Mental health −${d}`,
+      `Executive member energy deficit. Mental health −${d}`,
       `A child pointed. A parent sighed. Mental health −${d}`,
-      `Somebody's $1.50 hot dog was in there. Mental health −${d}`,
       `They were just trying to get to the samples. Mental health −${d}`,
       `Absolutely destroyed a display of 36-packs. Mental health −${d}`,
       `Your cart apologizes. You don't. Mental health −${d}`,
       `The free sample station is now a crime scene. Mental health −${d}`,
+      `The coupon printer has entered the chat. Mental health −${d}`,
+      `Your cart just filed a complaint. Mental health −${d}`,
+      `Someone's $1.50 hot dog was in there. Mental health −${d}`,
+      `The tire center is judging this lane change. Mental health −${d}`,
+      `You triggered a family-size awkward silence. Mental health −${d}`,
+      `The bulk cheese is witnessing. Mental health −${d}`,
     ];
     const message = messages[Math.floor(Math.random() * messages.length)];
     set({
@@ -104,5 +115,12 @@ export const useUIStore = create<UIStore>((set) => ({
       const next = !s.walkGraphVisible;
       console.log(`[Shortcut] H — walk graph overlay ${next ? 'ON' : 'OFF'}`);
       return { walkGraphVisible: next };
+    }),
+
+  toggleGodMode: () =>
+    set((s) => {
+      const next = !s.godMode;
+      console.log(`[Shortcut] G — god mode ${next ? 'ON (NPCs removed)' : 'OFF'}`);
+      return { godMode: next };
     }),
 }));

@@ -1,5 +1,76 @@
 # costco-chaos/ — lives in htdocs/costco-chaos/ and does not affect site root.
 
+# ── MIME types (uncompressed fallback) ───────────────────────
+<IfModule mod_mime.c>
+  AddType application/javascript .js .mjs
+  AddType text/css .css
+  AddType application/wasm .wasm
+  AddType font/woff2 .woff2
+</IfModule>
+
+# ── Pre-compressed assets ────────────────────────────────────
+# Build emits .br / .gz next to each asset. Serve them when the
+# browser accepts the encoding so we ship ~1MB instead of 3.5MB.
+<IfModule mod_headers.c>
+  # Brotli
+  RewriteEngine On
+  RewriteCond %{HTTP:Accept-Encoding} br
+  RewriteCond %{REQUEST_FILENAME}\.br -f
+  RewriteRule \.(js|css|svg|json|wasm)$ %{REQUEST_URI}.br [L]
+  # Gzip fallback
+  RewriteCond %{HTTP:Accept-Encoding} gzip
+  RewriteCond %{REQUEST_FILENAME}\.gz -f
+  RewriteRule \.(js|css|svg|json|wasm)$ %{REQUEST_URI}.gz [L]
+</IfModule>
+
+# Tell the browser the real type/encoding of the .br / .gz we just served.
+<FilesMatch "\.js\.br$">
+  ForceType application/javascript
+  Header set Content-Encoding br
+</FilesMatch>
+<FilesMatch "\.css\.br$">
+  ForceType text/css
+  Header set Content-Encoding br
+</FilesMatch>
+<FilesMatch "\.js\.gz$">
+  ForceType application/javascript
+  Header set Content-Encoding gzip
+</FilesMatch>
+<FilesMatch "\.css\.gz$">
+  ForceType text/css
+  Header set Content-Encoding gzip
+</FilesMatch>
+<IfModule mod_headers.c>
+  # Pre-compressed responses must not be re-compressed and vary by encoding.
+  <FilesMatch "\.(br|gz)$">
+    Header append Vary Accept-Encoding
+  </FilesMatch>
+</IfModule>
+
+# On-the-fly compression for anything not pre-compressed (fallback).
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css application/javascript application/json image/svg+xml
+</IfModule>
+
+# ── Caching ──────────────────────────────────────────────────
+# Hashed assets (index-AbC123.js) never change content → cache forever.
+# index.html must always revalidate so new builds are picked up.
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType application/javascript "access plus 1 year"
+  ExpiresByType text/css "access plus 1 year"
+  ExpiresByType image/svg+xml "access plus 1 year"
+  ExpiresByType application/wasm "access plus 1 year"
+</IfModule>
+<IfModule mod_headers.c>
+  <FilesMatch "\.(js|css|woff2?|wasm|svg)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+  <FilesMatch "\.html$">
+    Header set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+</IfModule>
+
 # Block direct HTTP access to the API key file.
 <FilesMatch "^ollama-key\.local\.php$">
   <IfModule mod_authz_core.c>

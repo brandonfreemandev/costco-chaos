@@ -57,6 +57,12 @@ export function useGameShortcuts(): void {
         return;
       }
 
+      if (event.code === 'KeyG') {
+        event.preventDefault();
+        useUIStore.getState().toggleGodMode();
+        return;
+      }
+
       if (event.code === 'KeyP' && (phase === 'SHOPPING' || phase === 'CHECKOUT')) {
         event.preventDefault();
         triggerPhoneInterlude();
