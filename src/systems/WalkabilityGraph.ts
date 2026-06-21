@@ -252,7 +252,26 @@ export function buildWalkabilityGraph(): WalkGraph {
   }
 
   const adjacency = buildAdjacency(edges);
-  graphCache = { nodes, edges, nodeById, adjacency, rejectedEdgeCount: rejected };
+
+  // Drop patrol nodes that ended up with no edges (e.g. center aisle at north
+  // front gap where row links are blocked by rack faces but column links skip
+  // because the next interior node is missing).
+  const linkedIds = new Set<string>();
+  for (const edge of edges) {
+    linkedIds.add(edge.from);
+    linkedIds.add(edge.to);
+  }
+  const prunedNodes = nodes.filter((n) => linkedIds.has(n.id));
+  const prunedNodeById = new Map<string, WalkGraphNode>();
+  for (const n of prunedNodes) prunedNodeById.set(n.id, n);
+
+  graphCache = {
+    nodes: prunedNodes,
+    edges,
+    nodeById: prunedNodeById,
+    adjacency,
+    rejectedEdgeCount: rejected,
+  };
   return graphCache;
 }
 

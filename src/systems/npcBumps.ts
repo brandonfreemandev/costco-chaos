@@ -25,9 +25,21 @@ export function isNpcTouching(px: number, pz: number, nx: number, nz: number, ca
 }
 
 /** Run once per frame after the cart moves — single source of truth for shopper bumps. */
-export function applyNpcBumps(px: number, pz: number, playerSpeed: number): void {
+export function applyNpcBumps(
+  px: number,
+  pz: number,
+  _playerSpeed: number,
+  playerVx = 0,
+  playerVz = 0,
+): void {
+  const playerMag = Math.hypot(playerVx, playerVz);
+
   for (const npc of getActiveNpcRuntimes()) {
     if (!isNpcTouching(px, pz, npc.x, npc.z, npc.meta.cartLoad)) continue;
-    tryNpcProximityBump(npc.meta.npcId, playerSpeed, npc.speed, npc.meta.cartLoad);
+
+    // Closing-speed estimate: both carts contribute when hulls touch.
+    const relativeVelocity = playerMag + npc.speed;
+
+    tryNpcProximityBump(npc.meta.npcId, relativeVelocity, npc.meta.cartLoad);
   }
 }

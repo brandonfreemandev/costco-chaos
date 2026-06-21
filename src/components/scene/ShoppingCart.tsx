@@ -213,7 +213,7 @@ export function ShoppingCart() {
     positionVec.set(px, cartY, pz);
     useCartTransformStore.getState().setTransform(positionVec, yawRef.current, speed);
 
-    applyNpcBumps(px, pz, speed);
+    applyNpcBumps(px, pz, speed, vx, vz);
 
     if (game.shoppingListComplete && game.phase === 'SHOPPING' && isInCheckoutApproach(px, pz)) {
       game.beginCheckout();

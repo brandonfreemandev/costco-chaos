@@ -70,16 +70,20 @@ export function FirstPersonCartCamera() {
     const shakeZ =
       (Math.sin(shakeTime.current * 53) + Math.cos(shakeTime.current * 97)) * shakeAmount * SHAKE_INTENSITY;
 
-    // Punch recoils opposite to forward (backward along travel direction)
+    // Punch recoils backward along travel direction (opposite forward)
     const punch = punchOffset.current;
     if (hasCart) {
       camera.position.set(
-        position.x - forwardX * PUSHER_OFFSET + shakeX + forwardX * punch,
+        position.x - forwardX * PUSHER_OFFSET + shakeX - forwardX * punch,
         EYE_HEIGHT + bob + shakeY,
-        position.z - forwardZ * PUSHER_OFFSET + shakeZ + forwardZ * punch,
+        position.z - forwardZ * PUSHER_OFFSET + shakeZ - forwardZ * punch,
       );
     } else {
-      camera.position.set(position.x + shakeX + forwardX * punch, EYE_HEIGHT + shakeY, position.z + shakeZ + forwardZ * punch);
+      camera.position.set(
+        position.x + shakeX - forwardX * punch,
+        EYE_HEIGHT + shakeY,
+        position.z + shakeZ - forwardZ * punch,
+      );
     }
     camera.rotation.set(0, yaw, 0, 'YXZ');
 
