@@ -1,11 +1,38 @@
 # Costco Chaos — Handoff (Transition to Next Tool)
 
-> **Updated:** 2026-06-20  
+> **Updated:** 2026-06-21  
 > **Repo:** `https://github.com/brandonfreemandev/costco-chaos.git`  
 > **Local:** `/Users/brandonfreeman/Desktop/costco-chaos`  
 > **Active branch:** `main`  
-> **Last commit:** `1faf180` — Audio layer, NPC name tags, and checkout boss depth  
-> **Name:** `costco-chaos` only — **`costcore` is dead**
+> **Last commit:** `fd622d1` — Add npm run deploy script  
+> **Name:** `costco-chaos` only — **`costcore` is dead**  
+> **Live:** https://costco-chaos.pages.dev (Cloudflare Pages)
+
+---
+
+## Hosting & deploy (current)
+
+Hosted on **Cloudflare Pages**. Static game + spouse-SMS proxy are one project,
+same origin (no CORS). Deploy with **one command**:
+
+```bash
+npm run deploy      # VITE_BASE=/ npm run build  +  wrangler pages deploy dist
+git add -A && git commit -m "..." && git push   # back up to GitHub
+```
+
+- **Proxy:** `public/_worker.js` (Cloudflare Pages Function) proxies `/ollama-api/*`
+  to ollama.com. Replaces the old InfinityFree `ollama-proxy.php`.
+- **Ollama key:** lives only in the Cloudflare `OLLAMA_API_KEY` secret (never in
+  repo/chat). Rotate at https://ollama.com/settings/keys. Re-add with
+  `npx wrangler pages secret put OLLAMA_API_KEY --project-name costco-chaos`.
+- **Base path:** `vite.config.ts` reads `VITE_BASE` (root for Cloudflare,
+  `/costco-chaos/` default for local/Apache). Always deploy via `npm run deploy`.
+- **Build optimization:** brotli/gzip pre-compression (vite-plugin-compression2);
+  Cloudflare also auto-compresses + CDN-caches.
+- **InfinityFree is dead** — abandoned (daily bandwidth quota throttled a 3.5MB
+  bundle). The old `.htaccess` + `ollama-proxy.php` remain in `public/` only for
+  a hypothetical Apache fallback; ignore them.
+- See `cheatsheet.md` for the full deploy/recovery command list.
 
 ---
 
@@ -19,7 +46,11 @@
 
 1. **Visual polish** — "Feels like the 90s." Procedural boxes + wallpaper shelves + capsule NPCs. User wants browser-shooter-level juice (feedback, lighting, personality) without slideshow FPS.
 2. **Damage model** — `mechanics.pseudocode` §1 wants impact = relative-velocity × cartLoad mapped to 1–15 MH. Currently flat ~6/bump. Velocity-scaled damage would add nuance.
-3. **More humor copy** — Rotating shelf labels, absurd bulk SKUs, more bump toast variants.
+
+**Recently shipped (2026-06-21):** Cloudflare hosting migration, comedy SKU rack
+labels (width-clipped, 1024px canvas), 24+ bump toasts, spouse SMS interlude,
+god mode (G), double-sided ceiling signs, scaled DEAL tags, gap-filler facades.
+Humor copy is in good shape now.
 
 **Do not regress:**
 
@@ -250,10 +281,16 @@ Files to touch: `systems/handleCollision.ts`, `systems/npcBumps.ts` (to pass rel
 
 ## Git state
 
-**Last commit:** `1faf180` — Audio layer, NPC name tags, and checkout boss depth  
-**Branch:** `main` — clean, pushed to origin  
+**Last commit:** `fd622d1` — Add npm run deploy script  
+**Branch:** `main` — pushed to origin (GitHub is the backup; commit + push often).
 
 **Before pushing:** `git status`, `npm run build`, ask user before commit.
+
+> ⚠️ **Uncommitted work is fragile here.** Twice this project lost hours of
+> uncommitted changes to outside tools running `git reset`/`checkout` (the user
+> bounces between Claude Code and Cursor). Commit + push after each working
+> change. Never run a destructive git command (`reset`, `checkout --`,
+> `restore`, `revert`) without asking the user first.
 
 **Deleted / renamed (historical):** `ComplianceGauge`, `PedestrianController`, `ParkingSpotSensor`, `PlayerNpcProximityCollision`, `cartSlideMovement`, decoy product culling
 
@@ -268,7 +305,7 @@ Files to touch: `systems/handleCollision.ts`, `systems/npcBumps.ts` (to pass rel
 | `architecture.md` | Partially stale |
 | `aesthetic_guidelines.md` | Tone target good; UI section describes current sidebar |
 | `costco-chaos-gemini-generated-starting-prompt.md` | Original vision — use for humor/tone inspiration |
-| `cheatsheet.md` | Port 5173 / kill stale vite |
+| `cheatsheet.md` | Run / deploy / Cloudflare recovery commands + in-game shortcuts |
 
 ---
 
@@ -277,9 +314,8 @@ Files to touch: `systems/handleCollision.ts`, `systems/npcBumps.ts` (to pass rel
 1. **Playtest** — 30s script above, confirm audio and name tags work in-browser.
 2. **Camera punch on bump** — single most impactful feel improvement; 10-line change in `FirstPersonCartCamera.tsx`.
 3. **Velocity-scaled damage** — `handleCollision.ts` + `npcBumps.ts`; makes the game feel more physical.
-4. **Shelf label copy + more toast variants** — pure copy work, high humor payoff.
-5. **Selective bloom** — `@react-three/postprocessing`, emissive targets only; test FPS on low-end first.
-6. **Commit** — if user asks.
+4. **Selective bloom** — `@react-three/postprocessing`, emissive targets only; test FPS on low-end first.
+5. **Commit + push + `npm run deploy`** — back up and ship after each change.
 
 ---
 
@@ -309,6 +345,9 @@ COLLISION_GROUP = { PLAYER: 0, NPC: 1, STATIC: 2 }
 | A / D | Steer |
 | **E** | Take sample (when kiosk live + in green ring) |
 | **I** | Skip to warehouse (parking only) |
+| **O** | Test checkout queue (shopping phase) |
+| **G** | God mode — remove all NPCs (toggle) |
+| **P** | Trigger spouse SMS interlude |
 | **1–6** | Switch checkout lane (CHECKOUT phase only) |
 
 ---
