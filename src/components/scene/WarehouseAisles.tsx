@@ -147,26 +147,35 @@ function AisleSigns() {
     <>
       {signConfigs.map((sign) => (
         <group key={`sign-${sign.z}`} position={[0, RACK_HEIGHT + 0.8, sign.z]}>
+          {/* Body */}
           <mesh scale={[3.4, 1.3, 0.12]} castShadow>
             <boxGeometry args={[1, 1, 1]} />
             <meshStandardMaterial color="#1e293b" roughness={0.35} metalness={0.55} />
           </mesh>
-          <mesh position={[0, 0, 0.08]} scale={[3.2, 0.12, 0.02]}>
-            <boxGeometry args={[1, 1, 1]} />
-            <meshStandardMaterial color={sign.accent} emissive={sign.accent} emissiveIntensity={0.25} />
-          </mesh>
-          <mesh position={[0, 0, 0.1]}>
+          {/* Front face + text + bottom accent strip */}
+          <mesh position={[0, 0, 0.07]}>
             <boxGeometry args={[3.2, 1.1, 0.02]} />
-            <meshStandardMaterial
-              color="#ffffff"
-              emissive="#fff8e8"
-              emissiveIntensity={0.08}
-              roughness={0.3}
-            />
+            <meshStandardMaterial color="#ffffff" emissive="#fff8e8" emissiveIntensity={0.08} roughness={0.3} />
           </mesh>
-          <Text position={[0, 0, 0.12]} fontSize={0.42} color={sign.accent} anchorX="center" anchorY="middle">
+          <Text position={[0, 0.08, 0.09]} fontSize={0.42} color={sign.accent} anchorX="center" anchorY="middle">
             {sign.label}
           </Text>
+          <mesh position={[0, -0.46, 0.08]} scale={[3.2, 0.18, 0.02]}>
+            <boxGeometry args={[1, 1, 1]} />
+            <meshStandardMaterial color={sign.accent} emissive={sign.accent} emissiveIntensity={0.35} />
+          </mesh>
+          {/* Back face + text + bottom accent strip (mirrored) */}
+          <mesh position={[0, 0, -0.07]}>
+            <boxGeometry args={[3.2, 1.1, 0.02]} />
+            <meshStandardMaterial color="#ffffff" emissive="#fff8e8" emissiveIntensity={0.08} roughness={0.3} />
+          </mesh>
+          <Text position={[0, 0.08, -0.09]} fontSize={0.42} color={sign.accent} anchorX="center" anchorY="middle" rotation={[0, Math.PI, 0]}>
+            {sign.label}
+          </Text>
+          <mesh position={[0, -0.46, -0.08]} scale={[3.2, 0.18, 0.02]}>
+            <boxGeometry args={[1, 1, 1]} />
+            <meshStandardMaterial color={sign.accent} emissive={sign.accent} emissiveIntensity={0.35} />
+          </mesh>
         </group>
       ))}
     </>

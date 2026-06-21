@@ -64,11 +64,21 @@ function drawTvSilhouette(ctx: CanvasRenderingContext2D, bx: number, by: number,
 }
 
 function drawSeasonalTag(ctx: CanvasRenderingContext2D, bx: number, by: number, bw: number, bh: number) {
+  const tagW = bw * 0.5;
+  const tagH = bh * 0.16;
+  const tagX = bx;
+  const tagY = by + bh * 0.07;
   ctx.fillStyle = '#dc2626';
-  ctx.fillRect(bx, by + bh * 0.08, bw * 0.55, bh * 0.18);
+  ctx.fillRect(tagX, tagY, tagW, tagH);
+  // Scale the DEAL text to the tag so it stays legible on the 1024px canvas.
+  const fs = Math.max(8, Math.floor(tagH * 0.6));
   ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 9px sans-serif';
-  ctx.fillText('DEAL', bx + bw * 0.06, by + bh * 0.2);
+  ctx.font = `bold ${fs}px sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('DEAL', tagX + tagW / 2, tagY + tagH / 2);
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
 }
 
 // Two lines only: name then price — keeps the label strip tight
