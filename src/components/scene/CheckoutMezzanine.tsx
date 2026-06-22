@@ -1,4 +1,4 @@
-import { Text } from '@react-three/drei';
+import { Billboard, Text } from '@react-three/drei';
 import { useGameStore } from '../../stores/gameStore';
 import { useCheckoutStore } from '../../stores/checkoutStore';
 import { WH_CEILING, WH_MAX_X, WH_MIN_X } from './warehouseLayout';
@@ -42,6 +42,7 @@ function CheckoutLabel({
   color,
   maxWidth,
   rotation = FACE_SHOPPER,
+  billboard = false,
 }: {
   children: string;
   position: [number, number, number];
@@ -49,11 +50,12 @@ function CheckoutLabel({
   color: string;
   maxWidth?: number;
   rotation?: [number, number, number];
+  billboard?: boolean;
 }) {
-  return (
+  const text = (
     <Text
-      position={position}
-      rotation={rotation}
+      position={billboard ? [0, 0, 0] : position}
+      rotation={billboard ? [0, 0, 0] : rotation}
       fontSize={fontSize}
       color={color}
       anchorX="center"
@@ -63,6 +65,8 @@ function CheckoutLabel({
       {children}
     </Text>
   );
+  // Billboard freestanding labels (lane numbers) so they never show a mirrored backface.
+  return billboard ? <Billboard position={position}>{text}</Billboard> : text;
 }
 
 function isRegisterBusy(lane: { processingRemaining: number; priceCheckRemaining: number }): boolean {
@@ -135,7 +139,7 @@ function LaneRegister({
         </>
       )}
 
-      <CheckoutLabel position={[0, 1.55, registerZ + 0.1]} fontSize={0.22} color={isOpen ? '#fde047' : '#94a3b8'}>
+      <CheckoutLabel position={[0, 1.55, registerZ + 0.1]} fontSize={0.22} color={isOpen ? '#fde047' : '#94a3b8'} billboard>
         {`LANE ${laneId}`}
       </CheckoutLabel>
     </group>
@@ -196,10 +200,10 @@ function CheckoutBackWall() {
       <BuildingWestVestibuleInterior facadeZ={facadeZ} />
 
       <CheckoutLabel position={[VESTIBULE_ENTRANCE.x, 6.2, facadeZ + 0.08]} fontSize={0.26} color="#bbf7d0">
-        ← MEMBER ENTRANCE
+        MEMBER ENTRANCE
       </CheckoutLabel>
       <CheckoutLabel position={[VESTIBULE_EXIT.x, 6.2, facadeZ + 0.08]} fontSize={0.28} color="#f1f5f9">
-        RECEIPT CHECK →
+        RECEIPT CHECK
       </CheckoutLabel>
     </group>
   );
@@ -295,7 +299,8 @@ export function CheckoutMezzanine() {
                 const anim = laneAdvanceAnim[laneId] ?? 1;
                 const slideOffset = (1 - anim) * QUEUE_SLOT_SPACING;
                 return Array.from({ length: visible }).map((_, q) => (
-                  <group key={`q-${q}`} position={[CUSTOMER_SIDE_X, 0, queueSlotZ(q) - slideOffset]} rotation={[0, 0, 0]}>
+                  // Face the register/belt to the south (-Z) — was facing north, away from the line.
+                  <group key={`q-${q}`} position={[CUSTOMER_SIDE_X, 0, queueSlotZ(q) - slideOffset]} rotation={[0, Math.PI, 0]}>
                     <ShopperAvatar
                       shirtColor={queueNpcLook(laneId, q).shirt}
                       skinTone={queueNpcLook(laneId, q).skin}
