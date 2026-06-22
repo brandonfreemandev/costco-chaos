@@ -129,11 +129,11 @@ function CrosswalkStripes() {
   const stripes = [];
   const count = 7;
   for (let i = 0; i < count; i++) {
-    const x = -CROSSWALK.width / 2 + 0.8 + i * 1.35;
+    const x = CROSSWALK.x - CROSSWALK.width / 2 + 0.8 + i * 1.1;
     stripes.push(
       <mesh key={i} rotation={[-Math.PI / 2, 0, 0]} position={[x, 0.045, CROSSWALK.z]}>
-        <planeGeometry args={[0.7, CROSSWALK.depth]} />
-        <meshStandardMaterial color="#f8fafc" roughness={0.75} />
+        <planeGeometry args={[0.6, CROSSWALK.depth]} />
+        <meshStandardMaterial color="#f8fafc" roughness={0.75} polygonOffset polygonOffsetFactor={-2} polygonOffsetUnits={-2} />
       </mesh>,
     );
   }
@@ -193,15 +193,15 @@ export function ParkingLot() {
 
       <CrosswalkStripes />
 
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.044, CROSSWALK.z - 1.8]}>
-        <planeGeometry args={[MAIN_DRIVE.maxX * 2 + 2, 0.35]} />
-        <meshStandardMaterial color="#fbbf24" roughness={0.85} emissive="#f59e0b" emissiveIntensity={0.06} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[CROSSWALK.x, 0.044, CROSSWALK.z - 1.8]}>
+        <planeGeometry args={[CROSSWALK.width + 2, 0.35]} />
+        <meshStandardMaterial color="#fbbf24" roughness={0.85} emissive="#f59e0b" emissiveIntensity={0.06} polygonOffset polygonOffsetFactor={-2} polygonOffsetUnits={-2} />
       </mesh>
 
       <Text
-        position={[0, 0.048, CROSSWALK.z + 1.4]}
+        position={[CROSSWALK.x, 0.048, CROSSWALK.z + 1.4]}
         rotation={[-Math.PI / 2, 0, 0]}
-        fontSize={0.32}
+        fontSize={0.3}
         color="#f8fafc"
         anchorX="center"
         anchorY="middle"

@@ -6,7 +6,12 @@
  * (which reads as bumper-to-bumper when you look down the main drive).
  */
 
-import { BUILDING_ENTRANCE, BUILDING_ENTRANCE_DOORS, VESTIBULE_ENTRANCE } from './buildingFacadeLayout';
+import {
+  BUILDING_ENTRANCE,
+  BUILDING_ENTRANCE_DOORS,
+  VESTIBULE_BARRIER_X,
+  VESTIBULE_ENTRANCE,
+} from './buildingFacadeLayout';
 
 export const LOT = {
   minX: -32,
@@ -26,7 +31,8 @@ export const BUILDING = {
   centerZ: -44,
 } as const;
 
-export const CROSSWALK = { z: -27, width: 10, depth: 2.4 } as const;
+/** Centered on the member vestibule so pedestrians cross straight to the doors. */
+export const CROSSWALK = { x: VESTIBULE_BARRIER_X, z: -27, width: 8, depth: 2.4 } as const;
 export const SIDEWALK = { z: -23, width: 14, depth: 3 } as const;
 
 /** North–south fire lane / main drive. */

@@ -9,9 +9,12 @@ import {
 } from './parkingLotLayout';
 
 const LINE_Y = 0.039;
-const LINE_MAT = new THREE.MeshBasicMaterial({ color: '#f8fafc', toneMapped: false });
-const YELLOW_MAT = new THREE.MeshBasicMaterial({ color: '#fbbf24', toneMapped: false });
-const BLUE_MAT = new THREE.MeshBasicMaterial({ color: '#3b82f6', toneMapped: false });
+// polygonOffset pulls the flat markings toward the camera in the depth buffer so
+// they always win against the coplanar asphalt/drive planes (no z-fighting flicker).
+const MARKING_OFFSET = { polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 } as const;
+const LINE_MAT = new THREE.MeshBasicMaterial({ color: '#f8fafc', toneMapped: false, ...MARKING_OFFSET });
+const YELLOW_MAT = new THREE.MeshBasicMaterial({ color: '#fbbf24', toneMapped: false, ...MARKING_OFFSET });
+const BLUE_MAT = new THREE.MeshBasicMaterial({ color: '#3b82f6', toneMapped: false, ...MARKING_OFFSET });
 
 function Line({
   args,

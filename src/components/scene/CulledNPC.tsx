@@ -75,12 +75,14 @@ export function generateGauntletNPCs(): NPCConfig[] {
   let seed = 42;
 
   const crossZ = CROSSWALK.z;
+  // Entrance corridor X — the gauntlet must guard the west member doors, not the old center.
+  const ex = CROSSWALK.x;
 
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 8; i++) {
     seed += 17;
     const fromLeft = rnd(seed) > 0.5;
     const z = crossZ + jitter(seed + 1, 5);
-    const midX = jitter(seed + 2, 3);
+    const midX = ex + jitter(seed + 2, 3);
     const midZ = z + jitter(seed + 3, 2.5);
     const archetype = archetypes[Math.floor(rnd(seed + 4) * archetypes.length)];
 
@@ -94,21 +96,21 @@ export function generateGauntletNPCs(): NPCConfig[] {
       chaos: 0.35 + rnd(seed + 9) * 0.55,
       waypoints: fromLeft
         ? [
-            [-8 + jitter(seed + 10, 2), 0.95, z],
+            [ex - 6 + jitter(seed + 10, 2), 0.95, z],
             [midX, 0.95, midZ],
-            [8 + jitter(seed + 11, 2), 0.95, z + jitter(seed + 12, 1.5)],
+            [ex + 6 + jitter(seed + 11, 2), 0.95, z + jitter(seed + 12, 1.5)],
           ]
         : [
-            [8 + jitter(seed + 10, 2), 0.95, z + jitter(seed + 11, 2)],
+            [ex + 6 + jitter(seed + 10, 2), 0.95, z + jitter(seed + 11, 2)],
             [midX, 0.95, midZ],
-            [-8 + jitter(seed + 12, 2), 0.95, z],
+            [ex - 6 + jitter(seed + 12, 2), 0.95, z],
           ],
     });
   }
 
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < 6; i++) {
     seed += 23;
-    const x = jitter(seed, 5.5);
+    const x = ex + jitter(seed, 4.5);
     const zStart = -14 + rnd(seed + 1) * 10;
     const zEnd = -33 + rnd(seed + 2) * 4;
     const archetype = archetypes[Math.floor(rnd(seed + 3) * archetypes.length)];
@@ -154,7 +156,7 @@ export function generateGauntletNPCs(): NPCConfig[] {
   for (let i = 0; i < 2; i++) {
     seed += 37;
     const z = 6 - i * 3.5 + jitter(seed, 1.2);
-    const x = jitter(seed + 1, 3.2);
+    const x = ex + jitter(seed + 1, 3.2);
 
     npcs.push({
       id: `gauntlet-approach-${id++}`,
