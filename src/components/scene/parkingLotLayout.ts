@@ -56,11 +56,11 @@ export const APPROACH_CART_OBSTACLES = [
 ] as const;
 
 /**
- * Just inside the west member-entrance door (south wall, x = VESTIBULE_ENTRANCE.x),
+ * Just inside the (now centered) member-entrance door on the south wall,
  * facing north (+Z) into the store. yaw = PI → forwardZ = -cos(PI) = +1 (north).
- * z = WH_MIN_Z (-28) + ~3.5 so the cart clears the south wall + door frame.
+ * z clears the south wall + door frame + travel-vestibule kiosks.
  */
-export const WAREHOUSE_INTERIOR_SPAWN = { x: VESTIBULE_ENTRANCE.x, z: -24.5, yaw: Math.PI } as const;
+export const WAREHOUSE_INTERIOR_SPAWN = { x: VESTIBULE_ENTRANCE.x, z: -26, yaw: Math.PI } as const;
 
 export const ENTRANCE_Z_BAND = {
   minZ: BUILDING.frontZ - 0.8,

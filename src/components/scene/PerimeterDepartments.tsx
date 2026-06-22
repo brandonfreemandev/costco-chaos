@@ -95,10 +95,10 @@ export function PerimeterDepartments() {
     { key: 'produce', label: 'FLORAL', accent: '#db2777', x: 13, z: innerNorthZ, rotY: Math.PI, w: 3.8, h: 4.8, cooler: false },
   ];
 
-  /** Impulse displays face south — toward members entering from the vestibule / doors. */
+  /** Impulse displays flush on the east wall at the front (near the entrance end). */
   const frontCourtDepts: DeptSpec[] = [
-    { key: 'photo', label: 'ELECTRONICS', accent: '#005dab', x: 4, z: innerFrontZ, rotY: Math.PI, w: 7, h: 5.4, cooler: false, freestanding: true },
-    { key: 'pharmacy', label: 'HBA & VITAMINS', accent: '#16a34a', x: 12, z: innerFrontZ, rotY: Math.PI, w: 5.5, h: 5, cooler: false, freestanding: true },
+    { key: 'photo', label: 'ELECTRONICS', accent: '#005dab', x: WH_MAX_X - 0.42, z: innerFrontZ + 1.5, rotY: -Math.PI / 2, w: 8, h: 5.4, cooler: false },
+    { key: 'pharmacy', label: 'HBA & VITAMINS', accent: '#16a34a', x: WH_MAX_X - 0.42, z: innerFrontZ + 9, rotY: -Math.PI / 2, w: 6, h: 5, cooler: false },
   ];
 
   const westDepts: DeptSpec[] = [

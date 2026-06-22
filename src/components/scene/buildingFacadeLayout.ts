@@ -3,9 +3,13 @@
  * All exterior/interior facade elements derive positions from these constants.
  */
 
-/** West entrance (left) and exit (right) with ~1.5 m between openings. */
-export const VESTIBULE_ENTRANCE = { x: -15, w: 3 } as const;
-export const VESTIBULE_EXIT = { x: -10.5, w: 3 } as const;
+/**
+ * Entrance + receipt-check exit, centered on the south wall (~1.5 m between
+ * openings). Centered so entering doesn't slam you against a side wall — the
+ * store opens symmetrically ahead. Both exterior and interior derive from these.
+ */
+export const VESTIBULE_ENTRANCE = { x: -2.25, w: 3 } as const;
+export const VESTIBULE_EXIT = { x: 2.25, w: 3 } as const;
 
 /** @deprecated aliases */
 export const BUILDING_ENTRANCE = VESTIBULE_ENTRANCE;
