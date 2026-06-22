@@ -123,7 +123,7 @@ interface EndcapQuad {
  * pair depth, centered between the rows.
  */
 function nearestPairCenterZ(z: number): number {
-  let best = RACK_PAIR_CENTERS_Z[0];
+  let best: number = RACK_PAIR_CENTERS_Z[0];
   for (const cz of RACK_PAIR_CENTERS_Z) {
     if (Math.abs(z - cz) < Math.abs(z - best)) best = cz;
   }
