@@ -12,6 +12,7 @@ import {
   VESTIBULE_BARRIER_X,
   VESTIBULE_ENTRANCE,
 } from './buildingFacadeLayout';
+import { BUILDING_FRONT_Z, YAW_NORTH, YAW_SOUTH } from './worldLayout';
 
 export const LOT = {
   minX: -32,
@@ -26,7 +27,7 @@ export const BUILDING = {
   width: 54,
   height: 13,
   depth: 20,
-  frontZ: -34,
+  frontZ: BUILDING_FRONT_Z,
   centerY: 6.5,
   centerZ: -44,
 } as const;
@@ -45,7 +46,7 @@ export const STALL = {
   rowGap: 7,
 } as const;
 
-export const PLAYER_SPAWN = { x: 0, z: 18, yaw: 0 } as const;
+export const PLAYER_SPAWN = { x: 0, z: 18, yaw: YAW_SOUTH } as const;
 
 export const APPROACH_CART_OBSTACLES = [
   { x: -2.4, z: 2 },
@@ -60,7 +61,7 @@ export const APPROACH_CART_OBSTACLES = [
  * facing north (+Z) into the store. yaw = PI → forwardZ = -cos(PI) = +1 (north).
  * z clears the south wall + door frame + travel-vestibule kiosks.
  */
-export const WAREHOUSE_INTERIOR_SPAWN = { x: VESTIBULE_ENTRANCE.x, z: -26, yaw: Math.PI } as const;
+export const WAREHOUSE_INTERIOR_SPAWN = { x: VESTIBULE_ENTRANCE.x, z: -26, yaw: YAW_NORTH } as const;
 
 export const ENTRANCE_Z_BAND = {
   minZ: BUILDING.frontZ - 0.8,

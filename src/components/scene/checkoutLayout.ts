@@ -1,4 +1,5 @@
-import { WH_MAX_X, WH_MIN_X, WH_MIN_Z } from './warehouseLayout';
+import { WH_MAX_X, WH_MIN_X } from './warehouseLayout';
+import { WAREHOUSE_SOUTH_Z, YAW_SOUTH } from './worldLayout';
 import {
   BUILDING_CLERESTORY_WINDOWS,
   BUILDING_EXIT_DOORS,
@@ -19,7 +20,7 @@ export const MEZZANINE_FLOOR_Y = 0;
 export const CHECKOUT_NORTH_EDGE_Z = -19;
 
 /** South warehouse wall — receipt-check exit on the west end. */
-export const CHECKOUT_EXIT_WALL_Z = WH_MIN_Z + 0.35;
+export const CHECKOUT_EXIT_WALL_Z = WAREHOUSE_SOUTH_Z + 0.35;
 /** Interior face of south exit wall (shoppers inside see this). */
 export const CHECKOUT_FACADE_Z = CHECKOUT_EXIT_WALL_Z + 0.32;
 export const CHECKOUT_WALL_THICK = 0.5;
@@ -51,7 +52,7 @@ export const CHECKOUT_LANE_X = [-12.5, -7.5, -2.5, 2.5, 7.5, 12.5] as const;
 export const CHECKOUT_DEV_SPAWN = {
   x: CHECKOUT_LANE_X[2],
   z: CHECKOUT_NORTH_EDGE_Z - 1.2,
-  yaw: 0,
+  yaw: YAW_SOUTH,
 } as const;
 
 export const CHECKOUT_LANE_IDS = ['1', '2', '3', '4', '5', '6'] as const;

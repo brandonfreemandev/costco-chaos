@@ -1,24 +1,29 @@
 import { WAREHOUSE_INTERIOR_SPAWN } from './parkingLotLayout';
+// Canonical world dimensions + coordinate contract live in worldLayout.ts.
+import {
+  WH_WIDTH,
+  WH_DEPTH,
+  WH_CEILING,
+  WH_MIN_X,
+  WH_MAX_X,
+  WH_MIN_Z,
+  WH_MAX_Z,
+} from './worldLayout';
 
 /**
- * Costco racetrack layout (1u ≈ 1m):
+ * Costco racetrack layout (1u ≈ 1m). Coordinate contract: see worldLayout.ts.
  * - Perimeter loop; entrance + checkout at south (−Z, near parking lot)
  * - N–S aisles: side aisles + wide center aisle
  * - E–W pallet rows in back-to-back pairs (no gap inside a pair)
  */
 
-export const WH_WIDTH = 34;
-export const WH_DEPTH = 56;
-export const WH_CEILING = 9;
+// Re-export so existing `import { WH_* } from './warehouseLayout'` sites keep working.
+export { WH_WIDTH, WH_DEPTH, WH_CEILING, WH_MIN_X, WH_MAX_X, WH_MIN_Z, WH_MAX_Z };
+
 export const RACK_HEIGHT = 5.4;
 export const RACK_COLLISION_DEPTH = 1.05;
 /** Visual rack depth — matches RACK_COLLISION_DEPTH so visuals and hitboxes align. */
 export const SPINE_DEPTH = RACK_COLLISION_DEPTH;
-
-export const WH_MIN_X = -WH_WIDTH / 2;
-export const WH_MAX_X = WH_WIDTH / 2;
-export const WH_MIN_Z = -WH_DEPTH / 2;
-export const WH_MAX_Z = WH_DEPTH / 2;
 
 export const PERIMETER_X_INSET = 5.2;
 export const PERIMETER_Z_MARGIN = 6.5;
