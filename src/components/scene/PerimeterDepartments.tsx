@@ -25,6 +25,8 @@ type DeptSpec = {
   h: number;
   cooler?: boolean;
   protrude?: number;
+  /** Free-standing display (not against a wall) — gets a solid double-faced body. */
+  freestanding?: boolean;
 };
 
 function DeptPanel({ spec }: { spec: DeptSpec }) {
@@ -49,6 +51,20 @@ function DeptPanel({ spec }: { spec: DeptSpec }) {
       <mesh receiveShadow material={mat}>
         <planeGeometry args={[spec.w, spec.h]} />
       </mesh>
+
+      {spec.freestanding && (
+        <>
+          {/* Solid core so it's not a floating sheet */}
+          <mesh position={[0, 0, -0.1]} receiveShadow castShadow>
+            <boxGeometry args={[spec.w, spec.h, 0.2]} />
+            <meshStandardMaterial color="#475569" roughness={0.8} />
+          </mesh>
+          {/* Back face shows the texture upright from the shopping (north) side — no mirror */}
+          <mesh position={[0, 0, -0.21]} rotation={[0, Math.PI, 0]} receiveShadow material={mat}>
+            <planeGeometry args={[spec.w, spec.h]} />
+          </mesh>
+        </>
+      )}
 
       {spec.cooler && (() => {
         const headerWorld = spec.h * (34 / 192);
@@ -81,8 +97,8 @@ export function PerimeterDepartments() {
 
   /** Impulse displays face south — toward members entering from the vestibule / doors. */
   const frontCourtDepts: DeptSpec[] = [
-    { key: 'photo', label: 'ELECTRONICS', accent: '#005dab', x: 4, z: innerFrontZ, rotY: Math.PI, w: 7, h: 5.4, cooler: false },
-    { key: 'pharmacy', label: 'HBA & VITAMINS', accent: '#16a34a', x: 12, z: innerFrontZ, rotY: Math.PI, w: 5.5, h: 5, cooler: false },
+    { key: 'photo', label: 'ELECTRONICS', accent: '#005dab', x: 4, z: innerFrontZ, rotY: Math.PI, w: 7, h: 5.4, cooler: false, freestanding: true },
+    { key: 'pharmacy', label: 'HBA & VITAMINS', accent: '#16a34a', x: 12, z: innerFrontZ, rotY: Math.PI, w: 5.5, h: 5, cooler: false, freestanding: true },
   ];
 
   const westDepts: DeptSpec[] = [
