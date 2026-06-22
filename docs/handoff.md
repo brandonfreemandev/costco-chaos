@@ -1,12 +1,34 @@
 # Costco Chaos — Handoff (Transition to Next Tool)
 
-> **Updated:** 2026-06-22  
+> **Updated:** 2026-06-22 (late session — Opus)  
 > **Repo:** `https://github.com/brandonfreemandev/costco-chaos.git`  
 > **Local:** `/Users/brandonfreeman/Desktop/costco-chaos`  
-> **Active branch:** `main`  
-> **Last commit:** `f86a397` — Deploy wrangler uploads to production main branch  
+> **Active branch:** `cursor/graph-punch-bump-damage` (NOT main — `main` is stale at `4342ea9`)  
+> **Last commit:** `ca57e49` — worldLayout.ts coordinate contract (step 1)  
 > **Name:** `costco-chaos` only — **`costcore` is dead**  
-> **Live:** https://costco-chaos.pages.dev (Cloudflare Pages)
+> **Live:** https://costco-chaos.pages.dev (Cloudflare Pages) — **not yet redeployed** with this session's work (owner is testing on localhost; deploy with `npm run deploy` once approved)
+
+---
+
+## 🔴 ACTIVE WORK — read before anything (2026-06-22 late session)
+
+**Branch reality:** All recent work is on `cursor/graph-punch-bump-damage`, pushed to origin. `main` is behind — do NOT assume main is current. Commit + push after every change (outside tools have wiped uncommitted work twice; never run `git reset/checkout/restore/revert` without asking the owner).
+
+**Coordinate contract now exists:** `src/components/scene/worldLayout.ts` is the bottom-of-graph source of truth for axis meanings (−Z south/entrance, +Z north/back, −X west, +X east), yaw (`YAW_SOUTH=0`, `YAW_NORTH=π`), the world box, and cross-shell anchors (`WAREHOUSE_SOUTH_Z`, `BUILDING_FRONT_Z`, `SHELL_GAP`). **Read it before reasoning about any position.** Doors derive from `VESTIBULE_*` in `buildingFacadeLayout.ts`.
+
+**worldLayout consolidation — IN PROGRESS (step 1 of N done):**
+- ✅ Step 1 (commit `ca57e49`): created `worldLayout.ts`; moved world dims there (re-exported from `warehouseLayout` so import sites are untouched); wired `BUILDING_FRONT_Z` + `YAW_*` into `parkingLotLayout`, `WAREHOUSE_SOUTH_Z` + `YAW_SOUTH` into `checkoutLayout`. Behavior-preserving (no value changes).
+- ⏳ Remaining (optional, do incrementally + behavior-preserving): migrate more scattered anchors into `worldLayout` (e.g. checkout Z bands, mezzanine bounds derivation, the parking↔warehouse bridge for `SHELL_GAP`). Keep each step a clean build with identical visuals; commit per step.
+
+**This session's shipped fixes (all on the branch, all built clean):**
+1. Parking: dashed-line z-fighting (polygonOffset), entrance gauntlet re-anchored to doors + denser, crosswalk fronts the vestibule.
+2. Interior vestibule mirrors exterior on the SOUTH wall (both doors); **doors centered** on the south wall (`VESTIBULE_*` x = ∓2.25) to kill the U-turn left/right disorientation — crosswalk/gauntlet/spawn/windows all cascade from those two constants.
+3. Checkout: LANE labels billboarded (no mirror), pointless door arrows removed, queue NPCs face the register, sample-kiosk labels billboarded.
+4. Front-court impulse displays (ELECTRONICS / HBA) moved flush onto the EAST wall.
+
+**Deferred by owner (revisit later):** assorted small text-element tidy-ups (various signs). Owner chose to push the worldLayout consolidation first.
+
+**Verify-in-browser caveat:** scripted preview camera can't reliably reach interior angles; the owner playtests interior facings. Exterior/parking + spawn centering were verified directly.
 
 ---
 
