@@ -67,18 +67,18 @@ export const ENTRANCE_MARKER = {
 } as const;
 
 export const CAR_COLORS = [
-  '#2a2d32',
-  '#4a4f57',
-  '#5c3d2e',
-  '#2e4a62',
-  '#6a6a6a',
-  '#8b1a1a',
-  '#d8d4cc',
-  '#1e3d2a',
-  '#3d5a80',
-  '#7c2d12',
-  '#f5f5f5',
-  '#8899aa',
+  '#2b2f36', // graphite
+  '#4b5563', // slate
+  '#7b8794', // steel blue-gray
+  '#d7d7d2', // pearl silver
+  '#f5f5f3', // white
+  '#1f3a5f', // navy
+  '#335f7d', // desaturated blue
+  '#4f5b66', // gunmetal
+  '#6f7a85', // cool gray
+  '#7a3e2b', // muted copper
+  '#5d4336', // walnut brown
+  '#6b2a2a', // deep maroon
 ] as const;
 
 /** Five stalls per side — each band uses a slightly different X set so columns don't stack in Z. */

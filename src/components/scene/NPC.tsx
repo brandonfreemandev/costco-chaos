@@ -194,6 +194,8 @@ export function NPC({ config }: NPCProps) {
           skinTone={config.skinTone ?? skinTones[Math.abs(seed) % skinTones.length]}
           hairColor={config.hairColor ?? hairColors[Math.abs(seed >> 3) % hairColors.length]}
           hasCart={hasCart}
+          seed={seed}
+          archetype={config.archetype}
         />
       </group>
 

@@ -1,253 +1,107 @@
 import { useMemo } from 'react';
 import * as THREE from 'three';
+import { useGLTF } from '@react-three/drei';
 
-export type CarBodyStyle = 'sedan' | 'crossover' | 'minivan';
+export type CarBodyStyle = 'prius' | 'rivian' | 'tesla';
 
-const GLASS = {
-  color: '#1e2838',
-  roughness: 0.04,
-  metalness: 0.85,
-  transparent: true,
-  opacity: 0.72,
-  envMapIntensity: 1.4,
+/** Public assets live under Vite's base path (e.g. /costco-chaos/). */
+function carModelUrl(file: string): string {
+  return `${import.meta.env.BASE_URL}models/cars/${file}`;
+}
+
+type CarModelConfig = {
+  path: string;
+  targetSize: [number, number, number];
+  tintStrength: number;
 };
 
-const TIRE = { color: '#1a1c20', roughness: 0.92, metalness: 0.05 };
-const RIM = { color: '#b8bcc4', roughness: 0.35, metalness: 0.75, envMapIntensity: 1.2 };
-const CHROME = { color: '#d0d4dc', roughness: 0.18, metalness: 0.92, envMapIntensity: 1.3 };
+const MODEL_CONFIG: Record<CarBodyStyle, CarModelConfig> = {
+  prius: { path: carModelUrl('prius.glb'), targetSize: [1.9, 1.45, 4.15], tintStrength: 0.42 },
+  rivian: { path: carModelUrl('rivian.glb'), targetSize: [2.0, 1.55, 4.25], tintStrength: 0.38 },
+  tesla: { path: carModelUrl('tesla.glb'), targetSize: [1.9, 1.4, 4.1], tintStrength: 0.36 },
+};
 
-function darken(hex: string, amount = 28): string {
-  const n = parseInt(hex.slice(1), 16);
-  const r = Math.max(0, ((n >> 16) & 255) - amount);
-  const g = Math.max(0, ((n >> 8) & 255) - amount);
-  const b = Math.max(0, (n & 255) - amount);
-  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
+function tintMaterial(material: THREE.Material, tint: THREE.Color, strength: number): THREE.Material {
+  const copy = material.clone();
+  if ('color' in copy && copy.color instanceof THREE.Color) {
+    copy.color = copy.color.clone().lerp(tint, strength);
+  }
+  if ('roughness' in copy && typeof copy.roughness === 'number') {
+    copy.roughness = Math.min(0.95, copy.roughness + 0.06);
+  }
+  if ('metalness' in copy && typeof copy.metalness === 'number') {
+    copy.metalness = Math.max(0, copy.metalness - 0.04);
+  }
+  return copy;
 }
 
-function Wheel({ position }: { position: [number, number, number] }) {
-  const tireGeo = useMemo(() => new THREE.CylinderGeometry(0.34, 0.34, 0.24, 16), []);
-  const rimGeo = useMemo(() => new THREE.CylinderGeometry(0.2, 0.2, 0.26, 12), []);
+function buildStyledModel(
+  source: THREE.Object3D,
+  color: string,
+  targetSize: [number, number, number],
+  tintStrength: number,
+): THREE.Object3D {
+  const clone = source.clone(true);
+  const tint = new THREE.Color(color);
 
-  return (
-    <group position={position}>
-      <mesh rotation={[0, 0, Math.PI / 2]} geometry={tireGeo} castShadow>
-        <meshStandardMaterial {...TIRE} />
-      </mesh>
-      <mesh rotation={[0, 0, Math.PI / 2]} geometry={rimGeo}>
-        <meshStandardMaterial {...RIM} />
-      </mesh>
-    </group>
-  );
+  clone.traverse((node) => {
+    const mesh = node as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    if (Array.isArray(mesh.material)) {
+      mesh.material = mesh.material.map((mat) => tintMaterial(mat, tint, tintStrength));
+    } else if (mesh.material) {
+      mesh.material = tintMaterial(mesh.material, tint, tintStrength);
+    }
+  });
+
+  clone.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(clone);
+  const size = box.getSize(new THREE.Vector3());
+
+  const sx = targetSize[0] / Math.max(size.x, 1e-5);
+  const sy = targetSize[1] / Math.max(size.y, 1e-5);
+  const sz = targetSize[2] / Math.max(size.z, 1e-5);
+  const scale = Math.min(sx, sy, sz);
+  clone.scale.setScalar(scale);
+
+  clone.updateMatrixWorld(true);
+  const scaledBox = new THREE.Box3().setFromObject(clone);
+  const center = scaledBox.getCenter(new THREE.Vector3());
+  clone.position.x = -center.x;
+  clone.position.z = -center.z;
+  clone.position.y = -scaledBox.min.y;
+
+  clone.updateMatrixWorld(true);
+  return clone;
 }
 
-function SedanBody({ color }: { color: string }) {
-  const paint = { color, roughness: 0.32, metalness: 0.45, envMapIntensity: 1.15 };
-  const trim = { color: darken(color, 18), roughness: 0.4, metalness: 0.35 };
-
-  return (
-    <group>
-      <mesh castShadow position={[0, 0.34, 0]}>
-        <boxGeometry args={[1.82, 0.38, 3.5]} />
-        <meshStandardMaterial {...paint} />
-      </mesh>
-      <mesh castShadow position={[0, 0.52, 1.05]}>
-        <boxGeometry args={[1.76, 0.18, 1.25]} />
-        <meshStandardMaterial {...trim} />
-      </mesh>
-      <mesh castShadow position={[0, 0.76, -0.12]}>
-        <boxGeometry args={[1.7, 0.48, 1.72]} />
-        <meshStandardMaterial {...paint} />
-      </mesh>
-      <mesh castShadow position={[0, 1.0, -0.15]}>
-        <boxGeometry args={[1.54, 0.08, 1.52]} />
-        <meshStandardMaterial {...paint} />
-      </mesh>
-      <mesh castShadow position={[0, 0.54, -1.28]}>
-        <boxGeometry args={[1.8, 0.24, 0.88]} />
-        <meshStandardMaterial {...trim} />
-      </mesh>
-
-      <mesh position={[0, 0.86, 0.58]} rotation={[-0.42, 0, 0]} castShadow>
-        <boxGeometry args={[1.58, 0.32, 0.05]} />
-        <meshStandardMaterial {...GLASS} />
-      </mesh>
-      <mesh position={[0, 0.84, -0.88]} rotation={[0.32, 0, 0]}>
-        <boxGeometry args={[1.5, 0.28, 0.05]} />
-        <meshStandardMaterial {...GLASS} />
-      </mesh>
-      <mesh position={[0.91, 0.78, -0.1]}>
-        <boxGeometry args={[0.04, 0.32, 1.35]} />
-        <meshStandardMaterial {...GLASS} />
-      </mesh>
-      <mesh position={[-0.91, 0.78, -0.1]}>
-        <boxGeometry args={[0.04, 0.32, 1.35]} />
-        <meshStandardMaterial {...GLASS} />
-      </mesh>
-
-      <mesh position={[0, 0.28, 1.82]}>
-        <boxGeometry args={[1.78, 0.22, 0.18]} />
-        <meshStandardMaterial color="#2a2d32" roughness={0.55} />
-      </mesh>
-      <mesh position={[0, 0.28, -1.82]}>
-        <boxGeometry args={[1.78, 0.22, 0.16]} />
-        <meshStandardMaterial color="#2a2d32" roughness={0.55} />
-      </mesh>
-      <mesh position={[0, 0.42, 1.88]}>
-        <boxGeometry args={[1.5, 0.12, 0.06]} />
-        <meshStandardMaterial color="#111318" roughness={0.4} />
-      </mesh>
-
-      <mesh position={[-0.68, 0.44, 1.78]}>
-        <boxGeometry args={[0.28, 0.1, 0.06]} />
-        <meshStandardMaterial color="#fff8e8" emissive="#fff4cc" emissiveIntensity={0.6} roughness={0.2} />
-      </mesh>
-      <mesh position={[0.68, 0.44, 1.78]}>
-        <boxGeometry args={[0.28, 0.1, 0.06]} />
-        <meshStandardMaterial color="#fff8e8" emissive="#fff4cc" emissiveIntensity={0.6} roughness={0.2} />
-      </mesh>
-      <mesh position={[-0.68, 0.46, -1.78]}>
-        <boxGeometry args={[0.32, 0.12, 0.05]} />
-        <meshStandardMaterial color="#991b1b" emissive="#ef4444" emissiveIntensity={0.55} />
-      </mesh>
-      <mesh position={[0.68, 0.46, -1.78]}>
-        <boxGeometry args={[0.32, 0.12, 0.05]} />
-        <meshStandardMaterial color="#991b1b" emissive="#ef4444" emissiveIntensity={0.55} />
-      </mesh>
-
-      <mesh position={[0.92, 0.62, 0.35]}>
-        <boxGeometry args={[0.08, 0.06, 0.14]} />
-        <meshStandardMaterial {...CHROME} />
-      </mesh>
-      <mesh position={[-0.92, 0.62, 0.35]}>
-        <boxGeometry args={[0.08, 0.06, 0.14]} />
-        <meshStandardMaterial {...CHROME} />
-      </mesh>
-
-      <Wheel position={[-0.82, 0.34, 1.15]} />
-      <Wheel position={[0.82, 0.34, 1.15]} />
-      <Wheel position={[-0.82, 0.34, -1.15]} />
-      <Wheel position={[0.82, 0.34, -1.15]} />
-    </group>
+function CarModel({ style, color }: { style: CarBodyStyle; color: string }) {
+  const config = MODEL_CONFIG[style];
+  const gltf = useGLTF(config.path);
+  const model = useMemo(
+    () => buildStyledModel(gltf.scene, color, config.targetSize, config.tintStrength),
+    [gltf.scene, color, config.targetSize, config.tintStrength],
   );
-}
-
-function CrossoverBody({ color }: { color: string }) {
-  const paint = { color, roughness: 0.3, metalness: 0.48, envMapIntensity: 1.15 };
-
-  return (
-    <group>
-      <mesh castShadow position={[0, 0.42, 0]}>
-        <boxGeometry args={[1.92, 0.48, 3.65]} />
-        <meshStandardMaterial {...paint} />
-      </mesh>
-      <mesh castShadow position={[0, 0.88, -0.05]}>
-        <boxGeometry args={[1.82, 0.62, 2.05]} />
-        <meshStandardMaterial {...paint} />
-      </mesh>
-      <mesh castShadow position={[0, 1.18, -0.08]}>
-        <boxGeometry args={[1.68, 0.1, 1.88]} />
-        <meshStandardMaterial {...paint} />
-      </mesh>
-      <mesh position={[0, 0.98, 0.72]} rotation={[-0.48, 0, 0]}>
-        <boxGeometry args={[1.7, 0.38, 0.05]} />
-        <meshStandardMaterial {...GLASS} />
-      </mesh>
-      <mesh position={[0, 0.95, -1.02]} rotation={[0.38, 0, 0]}>
-        <boxGeometry args={[1.62, 0.32, 0.05]} />
-        <meshStandardMaterial {...GLASS} />
-      </mesh>
-      <mesh position={[0.96, 0.88, 0]}>
-        <boxGeometry args={[0.04, 0.38, 1.55]} />
-        <meshStandardMaterial {...GLASS} />
-      </mesh>
-      <mesh position={[-0.96, 0.88, 0]}>
-        <boxGeometry args={[0.04, 0.38, 1.55]} />
-        <meshStandardMaterial {...GLASS} />
-      </mesh>
-      <mesh position={[0, 0.36, 1.88]}>
-        <boxGeometry args={[1.88, 0.28, 0.2]} />
-        <meshStandardMaterial color="#2a2d32" roughness={0.5} />
-      </mesh>
-      <mesh position={[-0.72, 0.5, 1.84]}>
-        <boxGeometry args={[0.3, 0.12, 0.06]} />
-        <meshStandardMaterial color="#fff8e8" emissive="#fff4cc" emissiveIntensity={0.55} />
-      </mesh>
-      <mesh position={[0.72, 0.5, 1.84]}>
-        <boxGeometry args={[0.3, 0.12, 0.06]} />
-        <meshStandardMaterial color="#fff8e8" emissive="#fff4cc" emissiveIntensity={0.55} />
-      </mesh>
-      <mesh position={[-0.72, 0.52, -1.86]}>
-        <boxGeometry args={[0.34, 0.14, 0.05]} />
-        <meshStandardMaterial color="#991b1b" emissive="#ef4444" emissiveIntensity={0.5} />
-      </mesh>
-      <mesh position={[0.72, 0.52, -1.86]}>
-        <boxGeometry args={[0.34, 0.14, 0.05]} />
-        <meshStandardMaterial color="#991b1b" emissive="#ef4444" emissiveIntensity={0.5} />
-      </mesh>
-      <Wheel position={[-0.88, 0.34, 1.2]} />
-      <Wheel position={[0.88, 0.34, 1.2]} />
-      <Wheel position={[-0.88, 0.34, -1.2]} />
-      <Wheel position={[0.88, 0.34, -1.2]} />
-    </group>
-  );
-}
-
-function MinivanBody({ color }: { color: string }) {
-  const paint = { color, roughness: 0.34, metalness: 0.4, envMapIntensity: 1.1 };
-
-  return (
-    <group>
-      <mesh castShadow position={[0, 0.46, 0]}>
-        <boxGeometry args={[1.88, 0.52, 4.05]} />
-        <meshStandardMaterial {...paint} />
-      </mesh>
-      <mesh castShadow position={[0, 0.98, 0.05]}>
-        <boxGeometry args={[1.82, 0.78, 2.45]} />
-        <meshStandardMaterial {...paint} />
-      </mesh>
-      <mesh castShadow position={[0, 1.32, 0.02]}>
-        <boxGeometry args={[1.74, 0.1, 2.28]} />
-        <meshStandardMaterial {...paint} />
-      </mesh>
-      <mesh position={[0, 1.02, 0.95]} rotation={[-0.45, 0, 0]}>
-        <boxGeometry args={[1.68, 0.42, 0.05]} />
-        <meshStandardMaterial {...GLASS} />
-      </mesh>
-      {[-0.55, 0, 0.55].map((x) => (
-        <mesh key={x} position={[x, 0.95, -0.35]}>
-          <boxGeometry args={[0.04, 0.42, 1.1]} />
-          <meshStandardMaterial {...GLASS} />
-        </mesh>
-      ))}
-      <mesh position={[0, 0.95, -1.15]} rotation={[0.35, 0, 0]}>
-        <boxGeometry args={[1.62, 0.38, 0.05]} />
-        <meshStandardMaterial {...GLASS} />
-      </mesh>
-      <Wheel position={[-0.86, 0.34, 1.35]} />
-      <Wheel position={[0.86, 0.34, 1.35]} />
-      <Wheel position={[-0.86, 0.34, -1.35]} />
-      <Wheel position={[0.86, 0.34, -1.35]} />
-    </group>
-  );
+  return <primitive object={model} />;
 }
 
 export function carStyleFromId(id: string): CarBodyStyle {
   const h = id.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
-  if (h % 5 === 0) return 'minivan';
-  if (h % 3 === 0) return 'crossover';
-  return 'sedan';
+  if (h % 3 === 0) return 'prius';
+  if (h % 2 === 0) return 'rivian';
+  return 'tesla';
 }
 
-/** Low-poly parked vehicle — sedan, crossover, or minivan. */
-export function ParkedCarVisual({ color, style }: { color: string; style: CarBodyStyle }) {
-  if (style === 'crossover') return <CrossoverBody color={color} />;
-  if (style === 'minivan') return <MinivanBody color={color} />;
-  return <SedanBody color={color} />;
+export function ParkedCarVisual({ id, color, style }: { id: string; color: string; style: CarBodyStyle }) {
+  void id;
+  return <CarModel style={style} color={color} />;
 }
 
 export function carColliderForStyle(style: CarBodyStyle): [number, number, number] {
-  if (style === 'minivan') return [1.0, 0.78, 2.05];
-  if (style === 'crossover') return [0.98, 0.76, 1.95];
+  if (style === 'prius') return [1.0, 0.78, 2.05];
+  if (style === 'rivian') return [0.98, 0.76, 1.95];
   return [0.95, 0.72, 1.9];
 }
 
@@ -255,3 +109,7 @@ export function carColliderForStyle(style: CarBodyStyle): [number, number, numbe
 export function carColliderCenterY(style: CarBodyStyle): number {
   return carColliderForStyle(style)[1] / 2;
 }
+
+useGLTF.preload(carModelUrl('prius.glb'));
+useGLTF.preload(carModelUrl('rivian.glb'));
+useGLTF.preload(carModelUrl('tesla.glb'));

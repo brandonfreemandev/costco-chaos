@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { Physics } from '@react-three/rapier';
 import { ContactShadows, PerspectiveCamera } from '@react-three/drei';
@@ -115,7 +116,9 @@ export function GameScene() {
       }}
       style={{ width: '100%', height: '100%' }}
     >
-      <SceneContent />
+      <Suspense fallback={null}>
+        <SceneContent />
+      </Suspense>
     </Canvas>
   );
 }

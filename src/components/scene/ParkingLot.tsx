@@ -80,7 +80,7 @@ function ParkedCar({ id, x, z, rotation, color }: { id: string; x: number; z: nu
       collisionGroups={interactionGroups(COLLISION_GROUP.STATIC, [COLLISION_GROUP.PLAYER, COLLISION_GROUP.NPC])}
     >
       <group position={[0, -bodyY - 0.04, 0]}>
-        <ParkedCarVisual color={color} style={style} />
+        <ParkedCarVisual id={id} color={color} style={style} />
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]} renderOrder={-1}>
           <planeGeometry args={[2.1, 4.2]} />
           <meshBasicMaterial color="#000000" transparent opacity={0.28} depthWrite={false} />

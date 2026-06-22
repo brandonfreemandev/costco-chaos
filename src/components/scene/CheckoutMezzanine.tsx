@@ -374,6 +374,7 @@ export function CheckoutMezzanine() {
                         skinTone={look.skin}
                         hairColor={look.hair}
                         hasCart={q > 0 || registerBusy}
+                        animate={false}
                       />
                     </group>
                   );

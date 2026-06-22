@@ -1,7 +1,6 @@
 #!/usr/bin/env node
-// Local dev proxy — replaces PHP for testing the Ollama spouse chat.
-// Run alongside Vite: node scripts/dev-proxy.js
-// Vite proxies /api/* to this server via vite.config.ts.
+// DEPRECATED: use `npm run dev` — Vite now proxies /ollama-api via scripts/ollamaDevProxy.ts.
+// Kept for manual debugging only.
 
 import http from 'http';
 import https from 'https';

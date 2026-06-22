@@ -30,7 +30,7 @@ export function WarehouseMap({ floating = false }: { floating?: boolean }) {
   const px = useCartTransformStore((s) => s.position.x);
   const pz = useCartTransformStore((s) => s.position.z);
 
-  if (phase !== 'SHOPPING' && phase !== 'CHECKOUT') return null;
+  if (phase !== 'SHOPPING') return null;
 
   const coolerW = 9;
   const coolerD = 7;

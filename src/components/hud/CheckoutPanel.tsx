@@ -20,24 +20,31 @@ export function CheckoutPanel({ floating = false }: { floating?: boolean }) {
   const sectionClass = floating ? 'float-hud float-hud-checkout checkout-panel' : 'sidebar-section checkout-panel';
   const labelClass = floating ? 'float-hud-label' : 'section-label';
 
+  const inBossPhase = phase === 'CHECKOUT';
+  const showLaneGrid = shoppingListComplete && lanes.length > 0;
+
   return (
     <section className={sectionClass}>
       <div className={labelClass}>Checkout Lanes</div>
-      {phase !== 'CHECKOUT' ? (
+      {!showLaneGrid ? (
         <p className="objective-copy">
           After your list is complete, drive north through the front court to the checkout lanes.
         </p>
       ) : (
         <>
-          <p className="checkout-hint">
-            You: Lane {playerLaneId} ·{' '}
-            {beingServed
-              ? 'being scanned…'
-              : slotsFromFront === 0
-                ? 'at register — waiting for cashier'
-                : `${slotsFromFront} carts ahead`}
-          </p>
-          {phase === 'CHECKOUT' && stressDrainPerSec > 0 && (
+          {inBossPhase ? (
+            <p className="checkout-hint">
+              You: Lane {playerLaneId} ·{' '}
+              {beingServed
+                ? 'being scanned…'
+                : slotsFromFront === 0
+                  ? 'at register — waiting for cashier'
+                  : `${slotsFromFront} carts ahead`}
+            </p>
+          ) : (
+            <p className="checkout-hint">Enter the lanes ahead — pick the shortest line.</p>
+          )}
+          {inBossPhase && stressDrainPerSec > 0 && (
             <p className={`checkout-stress ${priceCheckOnPlayerLane ? 'checkout-stress-alarm' : ''}`}>
               MH drain: −{stressDrainPerSec.toFixed(1)}/s
               {stressReason ? ` · ${stressReason}` : ''}
@@ -69,11 +76,15 @@ export function CheckoutPanel({ floating = false }: { floating?: boolean }) {
             );
             })}
           </div>
-          <p className="checkout-hint">
-            Press <strong>1–6</strong> to switch lanes
-            {switchCooldown > 0 ? ` (${Math.ceil(switchCooldown)}s cooldown)` : ''}. Switching can trigger price checks.
-          </p>
-          {lastEvent && <p className="checkout-event">{lastEvent}</p>}
+          {inBossPhase ? (
+            <>
+              <p className="checkout-hint">
+                Press <strong>1–6</strong> to switch lanes
+                {switchCooldown > 0 ? ` (${Math.ceil(switchCooldown)}s cooldown)` : ''}. Switching can trigger price checks.
+              </p>
+              {lastEvent && <p className="checkout-event">{lastEvent}</p>}
+            </>
+          ) : null}
         </>
       )}
     </section>

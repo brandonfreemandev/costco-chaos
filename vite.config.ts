@@ -1,8 +1,9 @@
-import { defineConfig, type Plugin } from 'vite';
+import { defineConfig, loadEnv, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { compression } from 'vite-plugin-compression2';
 import fs from 'node:fs';
 import path from 'node:path';
+import { ollamaDevProxy } from './scripts/ollamaDevProxy';
 
 /**
  * Dev-only watchdog logger.
@@ -68,13 +69,18 @@ function watchdogLogger(): Plugin {
   };
 }
 
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '');
+  const ollamaApiKey = env.OLLAMA_API_KEY ?? process.env.OLLAMA_API_KEY ?? '';
+
+  return {
   // Cloudflare Pages / Netlify serve at root; InfinityFree serves under /costco-chaos/.
   // Override with VITE_BASE=/ for root-hosted deploys.
-  base: process.env.VITE_BASE ?? '/costco-chaos/',
+  base: env.VITE_BASE ?? process.env.VITE_BASE ?? '/costco-chaos/',
   plugins: [
     react(),
     watchdogLogger(),
+    ollamaDevProxy(ollamaApiKey),
     // Pre-compress build output so hosts serve ~1MB instead of 3.5MB.
     // Emits .gz and .br alongside each asset > 1KB; .htaccess serves them.
     compression({ algorithms: ['gzip', 'brotliCompress'], threshold: 1024 }),
@@ -82,12 +88,6 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
-    proxy: {
-      // Forward /api/* to the Node dev proxy (scripts/dev-proxy.js)
-      '/api': {
-        target: 'http://localhost:8081',
-        changeOrigin: true,
-      },
-    },
   },
+};
 });

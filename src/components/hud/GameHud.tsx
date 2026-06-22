@@ -45,8 +45,10 @@ export function GameHud() {
 
   if (phase === 'MENU') return null;
 
-  const showMap = phase === 'SHOPPING';
-  const showFloatingCheckout = phase === 'CHECKOUT' && !checkoutWon;
+  const inCheckoutZone = shoppingListComplete && inCheckoutApproach;
+  const showMap = phase === 'SHOPPING' && !inCheckoutZone;
+  const showFloatingCheckout =
+    !checkoutWon && (phase === 'CHECKOUT' || (phase === 'SHOPPING' && inCheckoutZone));
 
   return (
     <div className="viewport-hud">

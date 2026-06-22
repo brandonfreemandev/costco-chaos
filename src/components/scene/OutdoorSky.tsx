@@ -1,5 +1,7 @@
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 import * as THREE from 'three';
+import { useFrame } from '@react-three/fiber';
+import { OutdoorHorizon } from './OutdoorHorizon';
 
 /** Canvas gradient with soft horizontal banding — cheery blue, not flat. */
 function createSkyGradientTexture(): THREE.CanvasTexture {
@@ -47,7 +49,7 @@ const CLOUD_SEEDS: { pos: [number, number, number]; scale: number }[] = [
   { pos: [-28, 34, -38], scale: 1.0 },
 ];
 
-function CloudCluster({ position, scale }: { position: [number, number, number]; scale: number }) {
+function CloudCluster({ scale }: { scale: number }) {
   const mat = useMemo(
     () =>
       new THREE.MeshBasicMaterial({
@@ -69,13 +71,69 @@ function CloudCluster({ position, scale }: { position: [number, number, number];
   ];
 
   return (
-    <group position={position} scale={scale}>
+    <group scale={scale}>
       {puffs.map((puff, i) => (
         <mesh key={i} position={puff.pos} material={mat} renderOrder={-900}>
           <sphereGeometry args={[puff.r, 10, 8]} />
         </mesh>
       ))}
     </group>
+  );
+}
+
+type CloudState = {
+  baseX: number;
+  baseY: number;
+  baseZ: number;
+  speed: number;
+  wobble: number;
+  phase: number;
+  scale: number;
+};
+
+function CloudField() {
+  const refs = useRef<Array<THREE.Group | null>>([]);
+  const clouds = useMemo<CloudState[]>(
+    () =>
+      CLOUD_SEEDS.map((c, i) => ({
+        baseX: c.pos[0],
+        baseY: c.pos[1],
+        baseZ: c.pos[2],
+        speed: 0.7 + (i % 4) * 0.12,
+        wobble: 0.8 + (i % 3) * 0.25,
+        phase: i * 0.9,
+        scale: c.scale,
+      })),
+    [],
+  );
+
+  useFrame(({ clock }, _delta) => {
+    const t = clock.elapsedTime;
+    for (let i = 0; i < clouds.length; i++) {
+      const ref = refs.current[i];
+      if (!ref) continue;
+      const c = clouds[i];
+      // Slow eastward drift + tiny Z wobble; wrap so cloud count stays fixed.
+      const driftX = ((c.baseX + t * c.speed + 68) % 136) - 68;
+      const driftZ = c.baseZ + Math.sin(t * 0.12 + c.phase) * c.wobble;
+      ref.position.set(driftX, c.baseY, driftZ);
+    }
+  });
+
+  return (
+    <>
+      {clouds.map((c, i) => (
+        <group
+          key={i}
+          ref={(node) => {
+            refs.current[i] = node;
+          }}
+          position={[c.baseX, c.baseY, c.baseZ]}
+        >
+          <CloudCluster scale={c.scale} />
+        </group>
+      ))}
+    </>
   );
 }
 
@@ -109,9 +167,8 @@ export function OutdoorSky() {
         <meshBasicMaterial color="#fff9c4" fog={false} toneMapped={false} transparent opacity={0.2} />
       </mesh>
 
-      {CLOUD_SEEDS.map((cloud, i) => (
-        <CloudCluster key={i} position={cloud.pos} scale={cloud.scale} />
-      ))}
+      <CloudField />
+      <OutdoorHorizon />
     </>
   );
 }
