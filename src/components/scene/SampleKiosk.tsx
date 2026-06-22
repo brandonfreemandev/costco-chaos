@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Text } from '@react-three/drei';
+import { Billboard, Text } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import type { Mesh, MeshBasicMaterial } from 'three';
 import * as THREE from 'three';
@@ -93,16 +93,20 @@ export function SampleKiosk({ kiosk }: SampleKioskProps) {
         <meshStandardMaterial color="#f5f5f0" roughness={0.35} metalness={0.2} />
       </mesh>
 
-      <Text position={[0, 1.65, 0]} fontSize={0.3} color={ready ? '#fde047' : '#94a3b8'} anchorX="center">
-        {ready ? 'FREE SAMPLE' : 'RESTOCKING…'}
-      </Text>
-      <Text position={[0, 1.32, 0]} fontSize={0.2} color="#e2e8f0" anchorX="center" maxWidth={2.2}>
-        {kiosk.sampleName}
-      </Text>
-      {ready && (
-        <Text position={[0, 0.35, 0.55]} fontSize={0.18} color={atMaxMh ? '#94a3b8' : '#86efac'} anchorX="center" maxWidth={2.4}>
-          {atMaxMh ? 'Already at 100% MH' : 'Roll cart through green ring'}
+      <Billboard position={[0, 1.5, 0]}>
+        <Text position={[0, 0.16, 0]} fontSize={0.3} color={ready ? '#fde047' : '#94a3b8'} anchorX="center">
+          {ready ? 'FREE SAMPLE' : 'RESTOCKING…'}
         </Text>
+        <Text position={[0, -0.17, 0]} fontSize={0.2} color="#e2e8f0" anchorX="center" maxWidth={2.2}>
+          {kiosk.sampleName}
+        </Text>
+      </Billboard>
+      {ready && (
+        <Billboard position={[0, 0.35, 0.55]}>
+          <Text fontSize={0.18} color={atMaxMh ? '#94a3b8' : '#86efac'} anchorX="center" maxWidth={2.4}>
+            {atMaxMh ? 'Already at 100% MH' : 'Roll cart through green ring'}
+          </Text>
+        </Billboard>
       )}
     </group>
   );
