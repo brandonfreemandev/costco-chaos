@@ -886,31 +886,39 @@ button {
 }
 
 .enter-stat-row {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  align-items: start;
+  column-gap: 10px;
   padding: 13px 0;
   border-bottom: 1px solid #1e293b;
 }
 
 .enter-stat-row:last-child { border-bottom: none; }
 
-.enter-stat-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 3px;
+.enter-stat-content {
+  min-width: 0;
 }
 
 .enter-row-icon {
   font-size: 36px;
   line-height: 1;
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: flex-start;
+  justify-content: center;
+  width: 40px;
+  margin-top: 2px;
 }
 
 .enter-stat-label {
+  display: block;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: #475569;
+  margin-bottom: 3px;
 }
 
 .enter-stat-note {

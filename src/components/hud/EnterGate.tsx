@@ -4,11 +4,11 @@ import { useGameStore } from '../../stores/gameStore';
 function BriefingRow({ icon, term, detail }: { icon: string; term: string; detail: string }) {
   return (
     <div className="enter-stat-row">
-      <div className="enter-stat-header">
-        <span className="enter-row-icon" role="img" aria-hidden="true">{icon}</span>
+      <span className="enter-row-icon" role="img" aria-hidden="true">{icon}</span>
+      <div className="enter-stat-content">
         <span className="enter-stat-label">{term}</span>
+        <p className="enter-stat-note">{detail}</p>
       </div>
-      <p className="enter-stat-note">{detail}</p>
     </div>
   );
 }
