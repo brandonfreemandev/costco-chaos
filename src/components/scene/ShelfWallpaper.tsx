@@ -1,16 +1,21 @@
-import { useLayoutEffect, useMemo, useRef } from 'react';
+import { useMemo } from 'react';
 import * as THREE from 'three';
 import {
   buildRackVisualChunks,
   buildRacetrackGapVisualChunks,
   RACK_HEIGHT,
+  RACK_PAIR_CENTERS_Z,
   SPINE_DEPTH,
   type CenterRackDept,
   type RackVisualChunk,
 } from './warehouseLayout';
-import { getDeptWallpaperTexture } from './shelfWallpaperTextures';
+import { getDeptEndcapTexture, getDeptWallpaperTexture } from './shelfWallpaperTextures';
 
 const FACE_OFFSET = SPINE_DEPTH / 2 + 0.02;
+/** Endcap sits just outside the rack's true X edge so it caps the long faces. */
+const ENDCAP_X_OFFSET = 0.03;
+/** Long faces tuck a hair under the endcap to hide the steel corner seam. */
+const LONG_FACE_TUCK = 0.02;
 
 /** Center-steel departments only — fresh/coolers live on perimeter facades. */
 const CENTER_RACK_DEPTS: CenterRackDept[] = [
@@ -26,130 +31,190 @@ function createMaterial(tex: THREE.Texture) {
     map: tex,
     roughness: 0.82,
     metalness: 0.04,
+    polygonOffset: true,
+    polygonOffsetFactor: -1,
+    polygonOffsetUnits: -1,
   });
 }
 
-function RackShelfFaces({
-  chunks,
+function RackLongFacade({
+  chunk,
   material,
 }: {
-  chunks: RackVisualChunk[];
+  chunk: RackVisualChunk;
   material: THREE.Material;
 }) {
-  const ref = useRef<THREE.InstancedMesh>(null);
-  const dummy = useMemo(() => new THREE.Object3D(), []);
-  const count = chunks.length * 2;
-
-  useLayoutEffect(() => {
-    const mesh = ref.current;
-    if (!mesh) return;
-
-    let i = 0;
-    for (const chunk of chunks) {
-      for (const sign of [-1, 1] as const) {
-        dummy.position.set(chunk.x, RACK_HEIGHT / 2, chunk.z + sign * FACE_OFFSET);
-        dummy.rotation.set(0, sign > 0 ? 0 : Math.PI, 0);
-        dummy.scale.set(chunk.w, RACK_HEIGHT, 1);
-        dummy.updateMatrix();
-        mesh.setMatrixAt(i, dummy.matrix);
-        i++;
-      }
-    }
-    mesh.instanceMatrix.needsUpdate = true;
-  }, [chunks, dummy]);
-
-  if (count === 0) return null;
+  const planeWidth = chunk.w + LONG_FACE_TUCK * 2;
+  const facesNorth = chunk.faceSide === -1;
+  const z = facesNorth ? chunk.z + FACE_OFFSET : chunk.z - FACE_OFFSET;
+  const rotationY = facesNorth ? 0 : Math.PI;
 
   return (
-    <instancedMesh ref={ref} args={[undefined, material, count]} frustumCulled>
-      <planeGeometry args={[1, 1]} />
-    </instancedMesh>
+    <mesh
+      position={[chunk.x, RACK_HEIGHT / 2, z]}
+      rotation={[0, rotationY, 0]}
+      material={material}
+      renderOrder={2}
+    >
+      <planeGeometry args={[planeWidth, RACK_HEIGHT]} />
+    </mesh>
   );
 }
 
-function DepartmentWallpaper({
+function mergeFacadeChunks(chunks: RackVisualChunk[]): RackVisualChunk[] {
+  type Bucket = RackVisualChunk[];
+  const buckets = new Map<string, Bucket>();
+  for (const c of chunks) {
+    const key = `${c.dept}|${c.faceSide}|${c.z.toFixed(2)}`;
+    const bucket = buckets.get(key);
+    if (bucket) bucket.push(c);
+    else buckets.set(key, [c]);
+  }
+
+  const merged: RackVisualChunk[] = [];
+  for (const bucket of buckets.values()) {
+    const sorted = [...bucket].sort((a, b) => (a.x - a.w / 2) - (b.x - b.w / 2));
+    let start = sorted[0].x - sorted[0].w / 2;
+    let end = sorted[0].x + sorted[0].w / 2;
+    const exemplar = sorted[0];
+    for (let i = 1; i < sorted.length; i++) {
+      const c = sorted[i];
+      const left = c.x - c.w / 2;
+      const right = c.x + c.w / 2;
+      // Adjacent/overlapping chunks belong to one continuous facade.
+      if (left <= end + 0.08) {
+        end = Math.max(end, right);
+      } else {
+        merged.push({
+          x: (start + end) / 2,
+          w: end - start,
+          z: exemplar.z,
+          faceSide: exemplar.faceSide,
+          dept: exemplar.dept,
+        });
+        start = left;
+        end = right;
+      }
+    }
+    merged.push({
+      x: (start + end) / 2,
+      w: end - start,
+      z: exemplar.z,
+      faceSide: exemplar.faceSide,
+      dept: exemplar.dept,
+    });
+  }
+
+  return merged;
+}
+
+interface EndcapQuad {
+  x: number;
+  z: number;
+  depth: number;
+  sign: 1 | -1;
+}
+
+/**
+ * Merge back-to-back row pairs into a single endcap per aisle end.
+ *
+ * Each rack pair is two rows ~SPINE_DEPTH apart in Z. Drawing one cap per row
+ * left a visible gap ("double endcap"); instead emit one quad spanning the full
+ * pair depth, centered between the rows.
+ */
+function nearestPairCenterZ(z: number): number {
+  let best = RACK_PAIR_CENTERS_Z[0];
+  for (const cz of RACK_PAIR_CENTERS_Z) {
+    if (Math.abs(z - cz) < Math.abs(z - best)) best = cz;
+  }
+  return best;
+}
+
+function buildEndcapQuads(chunks: RackVisualChunk[]): EndcapQuad[] {
+  const groups = new Map<
+    string,
+    { x: number; sign: 1 | -1; minZ: number; maxZ: number }
+  >();
+
+  for (const chunk of chunks) {
+    const halfW = chunk.w / 2;
+    const pairZ = nearestPairCenterZ(chunk.z);
+    for (const sign of [-1, 1] as const) {
+      const endX = chunk.x + sign * halfW;
+      const key = `${endX.toFixed(2)}|${sign}|${pairZ}`;
+      const g = groups.get(key);
+      if (!g) {
+        groups.set(key, { x: endX, sign, minZ: chunk.z, maxZ: chunk.z });
+      } else {
+        g.minZ = Math.min(g.minZ, chunk.z);
+        g.maxZ = Math.max(g.maxZ, chunk.z);
+      }
+    }
+  }
+
+  const quads: EndcapQuad[] = [];
+  for (const g of groups.values()) {
+    quads.push({
+      x: g.x,
+      z: (g.minZ + g.maxZ) / 2,
+      // Span the full pair depth + a hair so the cap covers both long-face ends.
+      depth: g.maxZ - g.minZ + SPINE_DEPTH + LONG_FACE_TUCK * 2,
+      sign: g.sign,
+    });
+  }
+  return quads;
+}
+
+/** ±X rack ends — cross-aisle views were blank steel before endcap wallpaper. */
+function DepartmentEndcaps({
   dept,
   allChunks,
 }: {
   dept: CenterRackDept;
   allChunks: RackVisualChunk[];
 }) {
-  const material = useMemo(() => createMaterial(getDeptWallpaperTexture(dept)), [dept]);
-  const chunks = useMemo(() => allChunks.filter((c) => c.dept === dept), [allChunks, dept]);
-
-  return <RackShelfFaces chunks={chunks} material={material} />;
-}
-
-/**
- * Racetrack-gap filler facade. These strips are much narrower than a full rack,
- * so stretching the whole texture across them squishes the wallpaper and leaves
- * a hard seam. Instead show a horizontal *slice* of the texture at the same
- * texel density as the adjacent rack, so products stay the same physical size.
- */
-function GapFacade({
-  chunk,
-  refW,
-  texture,
-}: {
-  chunk: RackVisualChunk;
-  refW: number;
-  texture: THREE.Texture;
-}) {
-  const material = useMemo(() => {
-    const tex = texture.clone();
-    tex.wrapS = THREE.RepeatWrapping;
-    tex.wrapT = THREE.RepeatWrapping;
-    tex.repeat.set(Math.max(0.05, chunk.w / refW), 1);
-    tex.needsUpdate = true;
-    return createMaterial(tex);
-  }, [texture, chunk.w, refW]);
+  const material = useMemo(() => createMaterial(getDeptEndcapTexture(dept)), [dept]);
+  const quads = useMemo(
+    () => buildEndcapQuads(allChunks.filter((c) => c.dept === dept)),
+    [allChunks, dept],
+  );
 
   return (
     <>
-      {([-1, 1] as const).map((sign) => (
+      {quads.map((q, i) => (
         <mesh
-          key={sign}
-          position={[chunk.x, RACK_HEIGHT / 2, chunk.z + sign * FACE_OFFSET]}
-          rotation={[0, sign > 0 ? 0 : Math.PI, 0]}
+          key={`${dept}-end-${i}`}
+          position={[q.x + q.sign * ENDCAP_X_OFFSET, RACK_HEIGHT / 2, q.z]}
+          rotation={[0, q.sign > 0 ? Math.PI / 2 : -Math.PI / 2, 0]}
           material={material}
+          renderOrder={2}
         >
-          <planeGeometry args={[chunk.w, RACK_HEIGHT]} />
+          <planeGeometry args={[q.depth, RACK_HEIGHT]} />
         </mesh>
       ))}
     </>
   );
 }
 
-function GapDepartmentFacades({
+function DepartmentFacades({
   dept,
-  gapChunks,
-  mainChunks,
+  chunks,
 }: {
   dept: CenterRackDept;
-  gapChunks: RackVisualChunk[];
-  mainChunks: RackVisualChunk[];
+  chunks: RackVisualChunk[];
 }) {
-  const texture = useMemo(() => getDeptWallpaperTexture(dept), [dept]);
-  const gaps = useMemo(() => gapChunks.filter((c) => c.dept === dept), [gapChunks, dept]);
-  const mains = useMemo(() => mainChunks.filter((c) => c.dept === dept), [mainChunks, dept]);
+  const material = useMemo(() => createMaterial(getDeptWallpaperTexture(dept)), [dept]);
+  const deptChunks = useMemo(() => chunks.filter((c) => c.dept === dept), [chunks, dept]);
 
   return (
     <>
-      {gaps.map((gap, i) => {
-        // Match the texel density of the nearest same-dept rack row.
-        const ref = mains.reduce<RackVisualChunk | undefined>((best, m) => {
-          if (!best) return m;
-          return Math.abs(m.z - gap.z) < Math.abs(best.z - gap.z) ? m : best;
-        }, undefined);
-        return (
-          <GapFacade
-            key={`${dept}-gap-${i}`}
-            chunk={gap}
-            refW={ref ? ref.w : gap.w}
-            texture={texture}
-          />
-        );
-      })}
+      {deptChunks.map((chunk, i) => (
+        <RackLongFacade
+          key={`${dept}-${i}-${chunk.x.toFixed(2)}@${chunk.z.toFixed(2)}`}
+          chunk={chunk}
+          material={material}
+        />
+      ))}
     </>
   );
 }
@@ -157,19 +222,18 @@ function GapDepartmentFacades({
 export function ShelfWallpaper() {
   const mainChunks = useMemo(() => buildRackVisualChunks(), []);
   const gapChunks = useMemo(() => buildRacetrackGapVisualChunks(), []);
+  const allChunks = useMemo(
+    () => mergeFacadeChunks([...mainChunks, ...gapChunks]),
+    [mainChunks, gapChunks],
+  );
 
   return (
     <>
       {CENTER_RACK_DEPTS.map((dept) => (
-        <DepartmentWallpaper key={dept} dept={dept} allChunks={mainChunks} />
+        <DepartmentFacades key={dept} dept={dept} chunks={allChunks} />
       ))}
       {CENTER_RACK_DEPTS.map((dept) => (
-        <GapDepartmentFacades
-          key={`gap-${dept}`}
-          dept={dept}
-          gapChunks={gapChunks}
-          mainChunks={mainChunks}
-        />
+        <DepartmentEndcaps key={`endcap-${dept}`} dept={dept} allChunks={allChunks} />
       ))}
     </>
   );

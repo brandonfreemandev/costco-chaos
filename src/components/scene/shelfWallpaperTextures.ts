@@ -41,6 +41,28 @@ const PALETTES: Record<
 };
 
 const cache = new Map<CenterRackDept, THREE.CanvasTexture>();
+const endcapCache = new Map<CenterRackDept, THREE.CanvasTexture>();
+
+/** Wallpaper columns on the 1024px canvas — must match createDeptTexture(). */
+const FACADE_COLUMNS: Record<CenterRackDept, number> = {
+  electronics: 3,
+  seasonal: 4,
+  grocery: 4,
+  household: 4,
+  bulkPaper: 4,
+};
+
+/**
+ * Physical width (m) of a single SKU column on a rack face. Kept constant across
+ * every chunk so columns never squish, and used with world-aligned UVs so carved
+ * chunks (and gap fillers) flow continuously with no visible seam.
+ */
+export const SKU_COLUMN_WIDTH_M = 0.72;
+
+/** Meters one full wallpaper canvas (FACADE_COLUMNS columns) spans along a face. */
+export function facadeTileWidthM(dept: CenterRackDept): number {
+  return FACADE_COLUMNS[dept] * SKU_COLUMN_WIDTH_M;
+}
 
 function pickColor(colors: string[], row: number, col: number): string {
   return colors[(row * 3 + col * 2) % colors.length];
@@ -152,8 +174,53 @@ function drawSkuLabel(
   ctx.textAlign = 'left';
 }
 
+function drawProductCell(
+  ctx: CanvasRenderingContext2D,
+  dept: CenterRackDept,
+  row: number,
+  col: number,
+  bx: number,
+  by: number,
+  bw: number,
+  bh: number,
+): void {
+  const { colors, gloss, kirkland, seasonal } = PALETTES[dept];
+
+  ctx.fillStyle = pickColor(colors, row, col);
+  ctx.fillRect(bx, by, bw, bh);
+  ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(bx + 0.5, by + 0.5, bw - 1, bh - 1);
+
+  if (dept === 'electronics' && (row + col) % 2 === 0) {
+    drawTvSilhouette(ctx, bx, by, bw, bh);
+  }
+  if (kirkland && (row + col) % 3 === 0) {
+    drawKirklandBand(ctx, bx, by, bw, bh);
+  }
+  if (seasonal && (row + col) % 4 === 0) {
+    drawSeasonalTag(ctx, bx, by, bw, bh);
+  }
+  if (gloss && (row + col) % 2 === 0) {
+    ctx.fillStyle = 'rgba(255,255,255,0.28)';
+    ctx.fillRect(bx + 2, by + 2, bw * 0.55, bh * 0.22);
+  }
+  if (dept === 'household' && (row + col) % 3 === 1) {
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.fillRect(bx + bw * 0.15, by + bh * 0.1, bw * 0.35, bh * 0.75);
+  }
+
+  const labelH = Math.max(10, Math.floor(bh * 0.26));
+  const labelY = by + bh - labelH;
+  ctx.fillStyle = '#e8e6e0';
+  ctx.fillRect(bx, labelY, bw, labelH);
+  ctx.fillStyle = 'rgba(0,0,0,0.45)';
+  ctx.fillRect(bx, labelY, bw, 1.5);
+  drawSkuLabel(ctx, bx, labelY + 2, bw, labelH - 2, dept, row, col);
+}
+
 function createDeptTexture(dept: CenterRackDept): THREE.CanvasTexture {
-  const { bg, shelf, colors, gloss, kirkland, seasonal } = PALETTES[dept];
+  const { bg, shelf } = PALETTES[dept];
   const size = 1024;
   const canvas = document.createElement('canvas');
   canvas.width = size;
@@ -185,42 +252,7 @@ function createDeptTexture(dept: CenterRackDept): THREE.CanvasTexture {
           ? bandH - pad * 2 - 6
           : bandH - pad * 2 - 8;
 
-      ctx.fillStyle = pickColor(colors, row, col);
-      ctx.fillRect(bx, by, bw, bh);
-      ctx.strokeStyle = 'rgba(0,0,0,0.15)';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(bx + 0.5, by + 0.5, bw - 1, bh - 1);
-
-      if (dept === 'electronics' && (row + col) % 2 === 0) {
-        drawTvSilhouette(ctx, bx, by, bw, bh);
-      }
-
-      if (kirkland && (row + col) % 3 === 0) {
-        drawKirklandBand(ctx, bx, by, bw, bh);
-      }
-
-      if (seasonal && (row + col) % 4 === 0) {
-        drawSeasonalTag(ctx, bx, by, bw, bh);
-      }
-
-      if (gloss && (row + col) % 2 === 0) {
-        ctx.fillStyle = 'rgba(255,255,255,0.28)';
-        ctx.fillRect(bx + 2, by + 2, bw * 0.55, bh * 0.22);
-      }
-
-      if (dept === 'household' && (row + col) % 3 === 1) {
-        ctx.fillStyle = 'rgba(255,255,255,0.5)';
-        ctx.fillRect(bx + bw * 0.15, by + bh * 0.1, bw * 0.35, bh * 0.75);
-      }
-
-      // Label strip — light gray so it reads on both dark and light cell backgrounds
-      const labelH = Math.max(10, Math.floor(bh * 0.26));
-      const labelY = by + bh - labelH;
-      ctx.fillStyle = '#e8e6e0';
-      ctx.fillRect(bx, labelY, bw, labelH);
-      ctx.fillStyle = 'rgba(0,0,0,0.45)';
-      ctx.fillRect(bx, labelY, bw, 1.5);
-      drawSkuLabel(ctx, bx, labelY + 2, bw, labelH - 2, dept, row, col);
+      drawProductCell(ctx, dept, row, col, bx, by, bw, bh);
     }
   }
 
@@ -233,11 +265,69 @@ function createDeptTexture(dept: CenterRackDept): THREE.CanvasTexture {
   return tex;
 }
 
+/** Narrow end-of-aisle facing — one product column per shelf band. */
+function createEndcapTexture(dept: CenterRackDept): THREE.CanvasTexture {
+  const { bg, shelf } = PALETTES[dept];
+  const width = 384;
+  const height = 1024;
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d')!;
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, width, height);
+
+  const shelfBands = dept === 'bulkPaper' || dept === 'grocery' ? 5 : dept === 'household' ? 5 : 4;
+  const bandH = height / shelfBands;
+  const pad = 6;
+  const innerW = width - pad * 2;
+  const halfW = innerW / 2;
+  const leftX = pad;
+  const rightX = pad + halfW;
+  const cols = FACADE_COLUMNS[dept];
+  const edgeColMinX = 0;
+  const edgeColMaxX = cols - 1;
+
+  for (let row = 0; row < shelfBands; row++) {
+    const y0 = row * bandH;
+    ctx.fillStyle = shelf;
+    ctx.fillRect(0, y0 + bandH - 5, width, 5);
+
+    const by = y0 + pad + 2;
+    const bh =
+      dept === 'bulkPaper' || dept === 'grocery' || dept === 'household'
+        ? bandH - pad * 2 - 6
+        : bandH - pad * 2 - 8;
+
+    /**
+     * Endcap U=0 edge should visually continue one rack-row corner, and U=1 the
+     * opposite corner. Long facades end on max-X column at one corner and min-X
+     * column at the other, so map those two edge columns across endcap width.
+     */
+    drawProductCell(ctx, dept, row, edgeColMaxX, leftX, by, halfW, bh);
+    drawProductCell(ctx, dept, row, edgeColMinX, rightX, by, halfW, bh);
+  }
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 16;
+  return tex;
+}
+
 export function getDeptWallpaperTexture(dept: CenterRackDept): THREE.CanvasTexture {
   let tex = cache.get(dept);
   if (!tex) {
     tex = createDeptTexture(dept);
     cache.set(dept, tex);
+  }
+  return tex;
+}
+
+export function getDeptEndcapTexture(dept: CenterRackDept): THREE.CanvasTexture {
+  let tex = endcapCache.get(dept);
+  if (!tex) {
+    tex = createEndcapTexture(dept);
+    endcapCache.set(dept, tex);
   }
   return tex;
 }
