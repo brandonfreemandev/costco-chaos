@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "build:cf": "VITE_BASE=/ npm run build",
-    "deploy": "npm run build:cf && npx wrangler pages deploy dist --project-name costco-chaos --commit-dirty=true",
+    "deploy": "npm run build:cf && npx wrangler pages deploy dist --project-name costco-chaos --branch main --commit-dirty=true",
     "preview": "vite preview",
     "validate:walkability": "npx tsx scripts/validate-walkability-graph.ts",
     "validate:routes": "npx tsx scripts/validate-gates.ts",
