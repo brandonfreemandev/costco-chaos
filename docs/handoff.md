@@ -3,8 +3,8 @@
 > **Updated:** 2026-06-22 (late session — Opus)  
 > **Repo:** `https://github.com/brandonfreemandev/costco-chaos.git`  
 > **Local:** `/Users/brandonfreeman/Desktop/costco-chaos`  
-> **Active branch:** `cursor/graph-punch-bump-damage` (NOT main — `main` is stale at `4342ea9`)  
-> **Last commit:** `ca57e49` — worldLayout.ts coordinate contract (step 1)  
+> **Active branch:** `main` (all work consolidated here; old `cursor/*` branches deleted)  
+> **Last commit:** `da5ba48` — handoff active-work section  
 > **Name:** `costco-chaos` only — **`costcore` is dead**  
 > **Live:** https://costco-chaos.pages.dev (Cloudflare Pages) — **not yet redeployed** with this session's work (owner is testing on localhost; deploy with `npm run deploy` once approved)
 
@@ -12,7 +12,7 @@
 
 ## 🔴 ACTIVE WORK — read before anything (2026-06-22 late session)
 
-**Branch reality:** All recent work is on `cursor/graph-punch-bump-damage`, pushed to origin. `main` is behind — do NOT assume main is current. Commit + push after every change (outside tools have wiped uncommitted work twice; never run `git reset/checkout/restore/revert` without asking the owner).
+**Branch reality:** Everything is consolidated onto `main` (the old `cursor/*` feature branches were fast-forward-merged in and deleted). Work directly on `main`. Commit + push after every change (outside tools have wiped uncommitted work twice; never run `git reset/checkout/restore/revert` without asking the owner).
 
 **Coordinate contract now exists:** `src/components/scene/worldLayout.ts` is the bottom-of-graph source of truth for axis meanings (−Z south/entrance, +Z north/back, −X west, +X east), yaw (`YAW_SOUTH=0`, `YAW_NORTH=π`), the world box, and cross-shell anchors (`WAREHOUSE_SOUTH_Z`, `BUILDING_FRONT_Z`, `SHELL_GAP`). **Read it before reasoning about any position.** Doors derive from `VESTIBULE_*` in `buildingFacadeLayout.ts`.
 
