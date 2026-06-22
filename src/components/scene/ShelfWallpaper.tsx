@@ -9,13 +9,18 @@ import {
   type CenterRackDept,
   type RackVisualChunk,
 } from './warehouseLayout';
-import { getDeptEndcapTexture, getDeptWallpaperTexture } from './shelfWallpaperTextures';
+import {
+  getDeptEndcapTexture,
+  getDeptWallpaperTexture,
+  wallpaperVariantCount,
+} from './shelfWallpaperTextures';
 
 const FACE_OFFSET = SPINE_DEPTH / 2 + 0.02;
 /** Endcap sits just outside the rack's true X edge so it caps the long faces. */
 const ENDCAP_X_OFFSET = 0.03;
 /** Long faces tuck a hair under the endcap to hide the steel corner seam. */
 const LONG_FACE_TUCK = 0.02;
+const VARIANTS = wallpaperVariantCount();
 
 /** Center-steel departments only — fresh/coolers live on perimeter facades. */
 const CENTER_RACK_DEPTS: CenterRackDept[] = [
@@ -35,6 +40,20 @@ function createMaterial(tex: THREE.Texture) {
     polygonOffsetFactor: -1,
     polygonOffsetUnits: -1,
   });
+}
+
+function hash32(seed: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) {
+    h ^= seed.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+function rackVariant(dept: CenterRackDept, centerX: number, pairZ: number): number {
+  const seed = `${dept}|${centerX.toFixed(2)}|${pairZ.toFixed(2)}`;
+  return hash32(seed) % VARIANTS;
 }
 
 function RackLongFacade({
@@ -109,6 +128,8 @@ function mergeFacadeChunks(chunks: RackVisualChunk[]): RackVisualChunk[] {
 }
 
 interface EndcapQuad {
+  centerX: number;
+  pairZ: number;
   x: number;
   z: number;
   depth: number;
@@ -133,7 +154,7 @@ function nearestPairCenterZ(z: number): number {
 function buildEndcapQuads(chunks: RackVisualChunk[]): EndcapQuad[] {
   const groups = new Map<
     string,
-    { x: number; sign: 1 | -1; minZ: number; maxZ: number }
+    { x: number; centerX: number; pairZ: number; sign: 1 | -1; minZ: number; maxZ: number }
   >();
 
   for (const chunk of chunks) {
@@ -144,7 +165,14 @@ function buildEndcapQuads(chunks: RackVisualChunk[]): EndcapQuad[] {
       const key = `${endX.toFixed(2)}|${sign}|${pairZ}`;
       const g = groups.get(key);
       if (!g) {
-        groups.set(key, { x: endX, sign, minZ: chunk.z, maxZ: chunk.z });
+        groups.set(key, {
+          x: endX,
+          centerX: chunk.x,
+          pairZ,
+          sign,
+          minZ: chunk.z,
+          maxZ: chunk.z,
+        });
       } else {
         g.minZ = Math.min(g.minZ, chunk.z);
         g.maxZ = Math.max(g.maxZ, chunk.z);
@@ -155,6 +183,8 @@ function buildEndcapQuads(chunks: RackVisualChunk[]): EndcapQuad[] {
   const quads: EndcapQuad[] = [];
   for (const g of groups.values()) {
     quads.push({
+      centerX: g.centerX,
+      pairZ: g.pairZ,
       x: g.x,
       z: (g.minZ + g.maxZ) / 2,
       // Span the full pair depth + a hair so the cap covers both long-face ends.
@@ -173,25 +203,41 @@ function DepartmentEndcaps({
   dept: CenterRackDept;
   allChunks: RackVisualChunk[];
 }) {
-  const material = useMemo(() => createMaterial(getDeptEndcapTexture(dept)), [dept]);
   const quads = useMemo(
     () => buildEndcapQuads(allChunks.filter((c) => c.dept === dept)),
     [allChunks, dept],
   );
+  const westMaterials = useMemo(
+    () =>
+      Array.from({ length: VARIANTS }, (_, i) =>
+        createMaterial(getDeptEndcapTexture(dept, false, i)),
+      ),
+    [dept],
+  );
+  const eastMaterials = useMemo(
+    () =>
+      Array.from({ length: VARIANTS }, (_, i) =>
+        createMaterial(getDeptEndcapTexture(dept, false, i)),
+      ),
+    [dept],
+  );
 
   return (
     <>
-      {quads.map((q, i) => (
+      {quads.map((q, i) => {
+        const variant = rackVariant(dept, q.centerX, q.pairZ);
+        return (
         <mesh
           key={`${dept}-end-${i}`}
           position={[q.x + q.sign * ENDCAP_X_OFFSET, RACK_HEIGHT / 2, q.z]}
           rotation={[0, q.sign > 0 ? Math.PI / 2 : -Math.PI / 2, 0]}
-          material={material}
+          material={q.sign > 0 ? eastMaterials[variant] : westMaterials[variant]}
           renderOrder={2}
         >
           <planeGeometry args={[q.depth, RACK_HEIGHT]} />
         </mesh>
-      ))}
+        );
+      })}
     </>
   );
 }
@@ -203,18 +249,25 @@ function DepartmentFacades({
   dept: CenterRackDept;
   chunks: RackVisualChunk[];
 }) {
-  const material = useMemo(() => createMaterial(getDeptWallpaperTexture(dept)), [dept]);
   const deptChunks = useMemo(() => chunks.filter((c) => c.dept === dept), [chunks, dept]);
+  const materials = useMemo(
+    () =>
+      Array.from({ length: VARIANTS }, (_, i) => createMaterial(getDeptWallpaperTexture(dept, i))),
+    [dept],
+  );
 
   return (
     <>
-      {deptChunks.map((chunk, i) => (
-        <RackLongFacade
-          key={`${dept}-${i}-${chunk.x.toFixed(2)}@${chunk.z.toFixed(2)}`}
-          chunk={chunk}
-          material={material}
-        />
-      ))}
+      {deptChunks.map((chunk, i) => {
+        const variant = rackVariant(dept, chunk.x, nearestPairCenterZ(chunk.z));
+        return (
+          <RackLongFacade
+            key={`${dept}-${i}-${chunk.x.toFixed(2)}@${chunk.z.toFixed(2)}`}
+            chunk={chunk}
+            material={materials[variant]}
+          />
+        );
+      })}
     </>
   );
 }

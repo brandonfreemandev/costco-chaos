@@ -2,7 +2,7 @@ import { useGameStore } from '../../stores/gameStore';
 import { useCheckoutStore } from '../../stores/checkoutStore';
 
 /** Live lane status during checkout boss phase. */
-export function CheckoutPanel() {
+export function CheckoutPanel({ floating = false }: { floating?: boolean }) {
   const phase = useGameStore((s) => s.phase);
   const shoppingListComplete = useGameStore((s) => s.shoppingListComplete);
   const lanes = useCheckoutStore((s) => s.lanes);
@@ -17,9 +17,12 @@ export function CheckoutPanel() {
 
   if (!shoppingListComplete && phase !== 'CHECKOUT') return null;
 
+  const sectionClass = floating ? 'float-hud float-hud-checkout checkout-panel' : 'sidebar-section checkout-panel';
+  const labelClass = floating ? 'float-hud-label' : 'section-label';
+
   return (
-    <section className="sidebar-section checkout-panel">
-      <div className="section-label">Checkout Lanes</div>
+    <section className={sectionClass}>
+      <div className={labelClass}>Checkout Lanes</div>
       {phase !== 'CHECKOUT' ? (
         <p className="objective-copy">
           After your list is complete, drive north through the front court to the checkout lanes.

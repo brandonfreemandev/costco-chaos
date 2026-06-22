@@ -66,7 +66,7 @@ export function GameSidebar() {
 
           <ShoppingListGrid />
 
-          <CheckoutPanel />
+          {phase !== 'CHECKOUT' && <CheckoutPanel />}
 
           <section className="sidebar-section stats-section">
             <div className="section-label">Cart Stats</div>

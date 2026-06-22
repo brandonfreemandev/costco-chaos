@@ -12,36 +12,37 @@ const PALETTES: Record<
   electronics: {
     bg: '#c8ced6',
     shelf: '#4b5563',
-    colors: ['#0f172a', '#1e293b', '#2563eb', '#111827', '#334155'],
+    colors: ['#1f2937', '#374151', '#4b5563', '#1d4ed8', '#0f766e', '#6b7280'],
     gloss: true,
   },
   seasonal: {
     bg: '#e8e4dc',
     shelf: '#6b6560',
-    colors: ['#b45309', '#0369a1', '#15803d', '#7c2d12', '#4c1d95', '#fafafa'],
+    colors: ['#a16207', '#92400e', '#047857', '#0f766e', '#7c3aed', '#d6d3d1'],
     seasonal: true,
   },
   grocery: {
     bg: '#f5f0e8',
     shelf: '#7a756c',
-    colors: ['#e11d48', '#005dab', '#fbbf24', '#16a34a', '#1e293b', '#fafafa'],
+    colors: ['#a16207', '#0f766e', '#0ea5a4', '#1d4ed8', '#9a3412', '#6b7280', '#d6d3d1', '#475569'],
     kirkland: true,
   },
   household: {
     bg: '#e8eef4',
     shelf: '#64748b',
-    colors: ['#0284c7', '#0ea5e9', '#f59e0b', '#ffffff', '#16a34a', '#6366f1'],
+    colors: ['#0369a1', '#0284c7', '#0f766e', '#334155', '#e5e7eb', '#2563eb'],
   },
   bulkPaper: {
     bg: '#ebe8e2',
     shelf: '#8a857c',
-    colors: ['#fafafa', '#f0ede8', '#ddd8cf', '#e8e4dc', '#cfc9be'],
+    colors: ['#f5f5f4', '#e7e5e4', '#d6d3d1', '#cbd5e1', '#c4b5a5'],
     kirkland: true,
   },
 };
 
-const cache = new Map<CenterRackDept, THREE.CanvasTexture>();
-const endcapCache = new Map<CenterRackDept, THREE.CanvasTexture>();
+const cache = new Map<string, THREE.CanvasTexture>();
+const endcapCache = new Map<string, THREE.CanvasTexture>();
+const VARIANT_COUNT = 8;
 
 /** Wallpaper columns on the 1024px canvas — must match createDeptTexture(). */
 const FACADE_COLUMNS: Record<CenterRackDept, number> = {
@@ -64,8 +65,14 @@ export function facadeTileWidthM(dept: CenterRackDept): number {
   return FACADE_COLUMNS[dept] * SKU_COLUMN_WIDTH_M;
 }
 
-function pickColor(colors: string[], row: number, col: number): string {
-  return colors[(row * 3 + col * 2) % colors.length];
+function pickColor(colors: string[], row: number, col: number, variant: number): string {
+  // Use a mixed row/col hash to avoid repeating vertical "flag" columns.
+  return colors[(row * 5 + col * 7 + row * col * 3 + variant * 11) % colors.length];
+}
+
+function normalizeVariant(variant: number): number {
+  const v = Math.floor(variant);
+  return ((v % VARIANT_COUNT) + VARIANT_COUNT) % VARIANT_COUNT;
 }
 
 function drawKirklandBand(ctx: CanvasRenderingContext2D, bx: number, by: number, bw: number, bh: number) {
@@ -147,11 +154,11 @@ const SKU_LABELS: Record<CenterRackDept, [string, string][]> = {
 function drawSkuLabel(
   ctx: CanvasRenderingContext2D,
   bx: number, by: number, bw: number, lh: number,
-  dept: CenterRackDept, row: number, col: number,
+  dept: CenterRackDept, row: number, col: number, variant: number,
 ) {
   const labels = SKU_LABELS[dept];
   // Scramble so neighbouring cells rarely share a label
-  const hash = (row * 31 + col * 17 + row * col * 7) % labels.length;
+  const hash = (row * 31 + col * 17 + row * col * 7 + variant * 37) % labels.length;
   const [name, price] = labels[hash];
 
   // Fit two lines inside lh: each line gets ~45% of strip height
@@ -179,6 +186,7 @@ function drawProductCell(
   dept: CenterRackDept,
   row: number,
   col: number,
+  variant: number,
   bx: number,
   by: number,
   bw: number,
@@ -186,8 +194,38 @@ function drawProductCell(
 ): void {
   const { colors, gloss, kirkland, seasonal } = PALETTES[dept];
 
-  ctx.fillStyle = pickColor(colors, row, col);
+  const primary = pickColor(colors, row, col, variant);
+  const secondary = pickColor(colors, row + 2, col + 3, variant);
+  const accent = pickColor(colors, row + 4, col + 1, variant);
+
+  ctx.fillStyle = primary;
   ctx.fillRect(bx, by, bw, bh);
+  const grad = ctx.createLinearGradient(bx, by, bx, by + bh);
+  grad.addColorStop(0, 'rgba(255,255,255,0.14)');
+  grad.addColorStop(1, 'rgba(0,0,0,0.12)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(bx, by, bw, bh);
+
+  // Packaging motif blocks reduce the "flat flag" look.
+  ctx.fillStyle = secondary;
+  ctx.globalAlpha = 0.3;
+  const motif = (row * 7 + col * 11 + variant * 5) % 4;
+  if (motif === 0) {
+    ctx.fillRect(bx + bw * 0.06, by + bh * 0.06, bw * 0.24, bh * 0.88);
+  } else if (motif === 1) {
+    ctx.fillRect(bx + bw * 0.70, by + bh * 0.06, bw * 0.24, bh * 0.88);
+  } else if (motif === 2) {
+    ctx.fillRect(bx + bw * 0.04, by + bh * 0.08, bw * 0.92, bh * 0.24);
+  } else {
+    ctx.fillRect(bx + bw * 0.22, by + bh * 0.16, bw * 0.56, bh * 0.68);
+  }
+  ctx.globalAlpha = 1;
+
+  ctx.fillStyle = accent;
+  ctx.globalAlpha = 0.22;
+  ctx.fillRect(bx + bw * 0.06, by + bh * 0.56, bw * 0.88, bh * 0.08);
+  ctx.globalAlpha = 1;
+
   ctx.strokeStyle = 'rgba(0,0,0,0.15)';
   ctx.lineWidth = 1;
   ctx.strokeRect(bx + 0.5, by + 0.5, bw - 1, bh - 1);
@@ -195,10 +233,10 @@ function drawProductCell(
   if (dept === 'electronics' && (row + col) % 2 === 0) {
     drawTvSilhouette(ctx, bx, by, bw, bh);
   }
-  if (kirkland && (row + col) % 3 === 0) {
+  if (kirkland && (row + col) % 4 === 0) {
     drawKirklandBand(ctx, bx, by, bw, bh);
   }
-  if (seasonal && (row + col) % 4 === 0) {
+  if (seasonal && (row + col) % 5 === 0) {
     drawSeasonalTag(ctx, bx, by, bw, bh);
   }
   if (gloss && (row + col) % 2 === 0) {
@@ -212,14 +250,14 @@ function drawProductCell(
 
   const labelH = Math.max(10, Math.floor(bh * 0.26));
   const labelY = by + bh - labelH;
-  ctx.fillStyle = '#e8e6e0';
+  ctx.fillStyle = '#ece9e1';
   ctx.fillRect(bx, labelY, bw, labelH);
   ctx.fillStyle = 'rgba(0,0,0,0.45)';
   ctx.fillRect(bx, labelY, bw, 1.5);
-  drawSkuLabel(ctx, bx, labelY + 2, bw, labelH - 2, dept, row, col);
+  drawSkuLabel(ctx, bx, labelY + 2, bw, labelH - 2, dept, row, col, variant);
 }
 
-function createDeptTexture(dept: CenterRackDept): THREE.CanvasTexture {
+function createDeptTexture(dept: CenterRackDept, variant: number): THREE.CanvasTexture {
   const { bg, shelf } = PALETTES[dept];
   const size = 1024;
   const canvas = document.createElement('canvas');
@@ -252,7 +290,7 @@ function createDeptTexture(dept: CenterRackDept): THREE.CanvasTexture {
           ? bandH - pad * 2 - 6
           : bandH - pad * 2 - 8;
 
-      drawProductCell(ctx, dept, row, col, bx, by, bw, bh);
+      drawProductCell(ctx, dept, row, col, variant, bx, by, bw, bh);
     }
   }
 
@@ -266,7 +304,7 @@ function createDeptTexture(dept: CenterRackDept): THREE.CanvasTexture {
 }
 
 /** Narrow end-of-aisle facing — one product column per shelf band. */
-function createEndcapTexture(dept: CenterRackDept): THREE.CanvasTexture {
+function createEndcapTexture(dept: CenterRackDept, mirrored: boolean, variant: number): THREE.CanvasTexture {
   const { bg, shelf } = PALETTES[dept];
   const width = 384;
   const height = 1024;
@@ -300,12 +338,13 @@ function createEndcapTexture(dept: CenterRackDept): THREE.CanvasTexture {
         : bandH - pad * 2 - 8;
 
     /**
-     * Endcap U=0 edge should visually continue one rack-row corner, and U=1 the
-     * opposite corner. Long facades end on max-X column at one corner and min-X
-     * column at the other, so map those two edge columns across endcap width.
+     * Endcaps must preserve edge continuity with long facades at both corners.
+     * Keep a clean 2-panel split to avoid any center "slice" artifacts.
      */
-    drawProductCell(ctx, dept, row, edgeColMaxX, leftX, by, halfW, bh);
-    drawProductCell(ctx, dept, row, edgeColMinX, rightX, by, halfW, bh);
+    const leftCol = mirrored ? edgeColMinX : edgeColMaxX;
+    const rightCol = mirrored ? edgeColMaxX : edgeColMinX;
+    drawProductCell(ctx, dept, row, leftCol, variant, leftX, by, halfW, bh);
+    drawProductCell(ctx, dept, row, rightCol, variant, rightX, by, halfW, bh);
   }
 
   const tex = new THREE.CanvasTexture(canvas);
@@ -314,20 +353,32 @@ function createEndcapTexture(dept: CenterRackDept): THREE.CanvasTexture {
   return tex;
 }
 
-export function getDeptWallpaperTexture(dept: CenterRackDept): THREE.CanvasTexture {
-  let tex = cache.get(dept);
+export function getDeptWallpaperTexture(dept: CenterRackDept, variant = 0): THREE.CanvasTexture {
+  const v = normalizeVariant(variant);
+  const key = `${dept}|${v}`;
+  let tex = cache.get(key);
   if (!tex) {
-    tex = createDeptTexture(dept);
-    cache.set(dept, tex);
+    tex = createDeptTexture(dept, v);
+    cache.set(key, tex);
   }
   return tex;
 }
 
-export function getDeptEndcapTexture(dept: CenterRackDept): THREE.CanvasTexture {
-  let tex = endcapCache.get(dept);
+export function getDeptEndcapTexture(
+  dept: CenterRackDept,
+  mirrored = false,
+  variant = 0,
+): THREE.CanvasTexture {
+  const v = normalizeVariant(variant);
+  const key = `${dept}|${mirrored ? 'm' : 'n'}|${v}`;
+  let tex = endcapCache.get(key);
   if (!tex) {
-    tex = createEndcapTexture(dept);
-    endcapCache.set(dept, tex);
+    tex = createEndcapTexture(dept, mirrored, v);
+    endcapCache.set(key, tex);
   }
   return tex;
+}
+
+export function wallpaperVariantCount(): number {
+  return VARIANT_COUNT;
 }

@@ -88,6 +88,10 @@ button {
   width: 188px;
 }
 
+.float-hud-checkout {
+  width: 188px;
+}
+
 .float-hud-label {
   font-size: 9px;
   font-weight: 700;
@@ -116,6 +120,37 @@ button {
 
 .float-hud-map .map-player {
   stroke-width: 1.5;
+}
+
+.float-hud-checkout .checkout-hint,
+.float-hud-checkout .checkout-event,
+.float-hud-checkout .checkout-stress {
+  font-size: 10px;
+  line-height: 1.35;
+  margin: 0 0 6px;
+}
+
+.float-hud-checkout .lane-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.float-hud-checkout .lane-cell {
+  padding: 5px 6px;
+  gap: 1px;
+}
+
+.float-hud-checkout .lane-num {
+  font-size: 11px;
+}
+
+.float-hud-checkout .lane-depth {
+  font-size: 9px;
+}
+
+.float-hud-checkout .lane-flag {
+  font-size: 8px;
 }
 
 /* ── Sidebar ─────────────────────────────────────── */
@@ -865,7 +900,7 @@ button {
 }
 
 .enter-row-icon {
-  font-size: 18px;
+  font-size: 36px;
   line-height: 1;
   flex-shrink: 0;
 }

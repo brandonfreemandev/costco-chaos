@@ -7,6 +7,7 @@ import { isInCheckoutApproach } from '../scene/checkoutLayout';
 import { SAMPLE_KIOSKS, SAMPLE_MH_RESTORE } from '../../systems/sampleStations';
 import { MentalHealthGauge } from './MentalHealthGauge';
 import { WarehouseMap } from './WarehouseMap';
+import { CheckoutPanel } from './CheckoutPanel';
 
 const COOLDOWN_MS = 28_000;
 
@@ -44,13 +45,15 @@ export function GameHud() {
 
   if (phase === 'MENU') return null;
 
-  const showMap = phase === 'SHOPPING' || phase === 'CHECKOUT';
+  const showMap = phase === 'SHOPPING';
+  const showFloatingCheckout = phase === 'CHECKOUT' && !checkoutWon;
 
   return (
     <div className="viewport-hud">
       <div className="float-hud-stack">
         <MentalHealthGauge floating />
         {showMap && <WarehouseMap floating />}
+        {showFloatingCheckout && <CheckoutPanel floating />}
       </div>
 
       {samplePrompt && (
