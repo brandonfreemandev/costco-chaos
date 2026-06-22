@@ -24,7 +24,7 @@ import {
   BUILDING,
   CART_CORRALS,
   CROSSWALK,
-  ENTRANCE_MARKER,
+  ENTRANCE_MARKERS,
   APPROACH_CART_OBSTACLES,
   generateParkedCars,
   LOT,
@@ -178,8 +178,18 @@ export function ParkingLot() {
       </mesh>
 
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.043, BUILDING.frontZ + 2]} receiveShadow material={concreteMat}>
-        <planeGeometry args={[BUILDING.entranceWidth + 4, 4]} />
+        <planeGeometry args={[BUILDING.width - 4, 4]} />
       </mesh>
+
+      {ENTRANCE_MARKERS.map((marker) => (
+        <group key={marker.id}>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[marker.x, 0.046, marker.z]}>
+            <planeGeometry args={[marker.width, marker.depth]} />
+            <meshStandardMaterial color="#15803d" emissive="#22c55e" emissiveIntensity={0.35} roughness={0.75} />
+          </mesh>
+          <pointLight position={[marker.x, 2.5, marker.z]} intensity={0.5} color="#4ade80" distance={8} decay={2} />
+        </group>
+      ))}
 
       <CrosswalkStripes />
 
@@ -199,12 +209,6 @@ export function ParkingLot() {
       >
         PEDESTRIAN CROSSING
       </Text>
-
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[ENTRANCE_MARKER.x, 0.046, ENTRANCE_MARKER.z]}>
-        <planeGeometry args={[ENTRANCE_MARKER.width, ENTRANCE_MARKER.depth]} />
-        <meshStandardMaterial color="#15803d" emissive="#22c55e" emissiveIntensity={0.35} roughness={0.75} />
-      </mesh>
-      <pointLight position={[ENTRANCE_MARKER.x, 2.5, ENTRANCE_MARKER.z]} intensity={0.5} color="#4ade80" distance={8} decay={2} />
 
       <CostcoBuilding />
 

@@ -2,7 +2,7 @@ import { WAREHOUSE_INTERIOR_SPAWN } from './parkingLotLayout';
 
 /**
  * Costco racetrack layout (1u ≈ 1m):
- * - Perimeter loop; entrance + checkout at north (+Z)
+ * - Perimeter loop; entrance + checkout at south (−Z, near parking lot)
  * - N–S aisles: side aisles + wide center aisle
  * - E–W pallet rows in back-to-back pairs (no gap inside a pair)
  */
@@ -22,15 +22,16 @@ export const WH_MAX_Z = WH_DEPTH / 2;
 
 export const PERIMETER_X_INSET = 5.2;
 export const PERIMETER_Z_MARGIN = 6.5;
+/** South wall → first pallet row; matches checkout cap depth (~9 m). */
+export const SOUTH_FRONT_CAP = 9;
 
 export const CENTER_MIN_X = WH_MIN_X + PERIMETER_X_INSET;
 export const CENTER_MAX_X = WH_MAX_X - PERIMETER_X_INSET;
 
-export const FRONT_COURT_MIN_Z = 20.5;
-/** Keep pallet rows away from checkout mezzanine. */
+/** Keep pallet rows away from the north wall. */
 export const CHECKOUT_RACK_GAP = 4.5;
-export const RACK_Z_MAX = FRONT_COURT_MIN_Z - CHECKOUT_RACK_GAP;
-export const RACK_Z_MIN = WH_MIN_Z + PERIMETER_Z_MARGIN;
+export const RACK_Z_MAX = WH_MAX_Z - CHECKOUT_RACK_GAP;
+export const RACK_Z_MIN = WH_MIN_Z + SOUTH_FRONT_CAP;
 
 export const SIDE_AISLE_WIDTH = 3.1;
 export const CENTER_AISLE_WIDTH = 5.4;
@@ -69,7 +70,7 @@ export interface RackSegment {
 /**
  * Center-court steel departments by block (indices match RACK_PAIR_CENTERS_Z south → north).
  *
- * Costco racetrack (entrance north): west block = general merchandise — TVs & luxe
+ * Costco racetrack (entrance south): west block = general merchandise — TVs & luxe
  * at the front-left as you walk in; east block = food / grocery. Perimeter walls
  * still own fresh coolers.
  */

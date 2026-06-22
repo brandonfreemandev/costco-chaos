@@ -53,9 +53,9 @@ export function GameSidebar() {
             <div className="section-label">Objective</div>
             <p className="objective-copy">
               {phase === 'PARKING' && !parkingSpotSecured
-                ? 'Dodge the chaos. Reach the green entrance mat alive. Mental health is a luxury.'
+                ? 'Dodge the chaos. Reach the green entrance mat at the west doors. Mental health is a luxury.'
                 : phase === 'SHOPPING' && shoppingListComplete
-                  ? 'All items collected — proceed to CHECKOUT at the front of the store (north on map).'
+                  ? 'All items collected — return to CHECKOUT at the entrance end of the store (bottom of map).'
                   : phase === 'SHOPPING'
                   ? `Collect ${itemsRemaining} item${itemsRemaining !== 1 ? 's' : ''} before your sanity checks out.`
                   : phase === 'CHECKOUT'

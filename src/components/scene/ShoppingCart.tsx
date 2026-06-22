@@ -31,6 +31,8 @@ import {
 import { PLAYER_SPAWN, WAREHOUSE_INTERIOR_SPAWN } from './parkingLotLayout';
 import {
   CHECKOUT_MEZZANINE,
+  CHECKOUT_NORTH_EDGE_Z,
+  CHECKOUT_VESTIBULE_MIN_Z,
   getCheckoutFloorY,
   isInCheckoutApproach,
 } from './checkoutLayout';
@@ -88,7 +90,7 @@ export function ShoppingCart() {
     useGameStore.getState().markShoppingComplete();
     useUIStore.setState({
       lastCollisionMessage:
-        'List complete! Drive north to CHECKOUT at the front of the store. Press 1–6 in lane to switch.',
+        'List complete! Return to the front checkout lanes (entrance end). Press 1–6 in lane to switch.',
     });
   }, [phase, itemsRemaining]);
 
@@ -178,11 +180,11 @@ export function ShoppingCart() {
 
     if (game.phase === 'SHOPPING' || game.phase === 'CHECKOUT') {
       posRef.current.x = Math.max(WH_MIN_X + 1.5, Math.min(WH_MAX_X - 1.5, posRef.current.x));
-      const maxZ =
-        game.phase === 'CHECKOUT' || isInCheckoutApproach(posRef.current.x, posRef.current.z)
-          ? WH_MAX_Z - 0.3
-          : WH_MAX_Z - 1.5;
-      posRef.current.z = Math.max(WH_MIN_Z + 1.5, Math.min(maxZ, posRef.current.z));
+      const inCheckoutZone =
+        game.phase === 'CHECKOUT' || isInCheckoutApproach(posRef.current.x, posRef.current.z);
+      const maxZ = inCheckoutZone ? CHECKOUT_NORTH_EDGE_Z + 4 : WH_MAX_Z - 1.5;
+      const minZ = inCheckoutZone ? CHECKOUT_VESTIBULE_MIN_Z - 0.3 : WH_MIN_Z + 1.5;
+      posRef.current.z = Math.max(minZ, Math.min(maxZ, posRef.current.z));
 
       if (game.phase === 'CHECKOUT') {
         posRef.current.x = Math.max(

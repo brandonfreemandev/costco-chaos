@@ -66,7 +66,7 @@ export function GameHud() {
         <div className="toast-banner toast-objective">
           {inCheckoutApproach
             ? 'Entering checkout…'
-            : 'List complete — drive north to CHECKOUT (front of store).'}
+            : 'List complete — return to front CHECKOUT (entrance end).'}
         </div>
       )}
 

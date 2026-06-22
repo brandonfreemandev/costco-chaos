@@ -60,9 +60,9 @@ function getPerimeterDeptObstacles(): Aabb[] {
 
   return [
     blockAabb(eastCx, 13, EAST_DEPT_STRIP_W, 27),
-    blockAabb(westCx, -18, WEST_COOLER_STRIP_W, 9.5),
-    blockAabb(westCx, -4, WEST_COOLER_STRIP_W, 10.5),
-    blockAabb(westCx, 12, WEST_COOLER_STRIP_W, 8.5),
+    blockAabb(westCx, -8, WEST_COOLER_STRIP_W, 9.5),
+    blockAabb(westCx, 6, WEST_COOLER_STRIP_W, 10.5),
+    blockAabb(westCx, 20, WEST_COOLER_STRIP_W, 8.5),
   ];
 }
 
@@ -104,7 +104,7 @@ export function getWarehouseObstacles(): Aabb[] {
   if (warehouseCache) return warehouseCache;
 
   const boxes: Aabb[] = [...buildRackCollisionObstacles()];
-  boxes.push(blockAabb(-11, WH_MIN_Z + 0.95, 6.5, 1.0));
+  boxes.push(blockAabb(-11, WH_MAX_Z - 0.95, 6.5, 1.0));
   boxes.push(...getPerimeterDeptObstacles());
   boxes.push({ minX: WH_MIN_X, maxX: WH_MAX_X, minZ: WH_MIN_Z - 1, maxZ: WH_MIN_Z + 0.5 });
   boxes.push({ minX: WH_MIN_X, maxX: WH_MAX_X, minZ: WH_MAX_Z - 0.5, maxZ: WH_MAX_Z + 1 });

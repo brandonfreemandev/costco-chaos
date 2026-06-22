@@ -6,6 +6,8 @@
  * (which reads as bumper-to-bumper when you look down the main drive).
  */
 
+import { BUILDING_ENTRANCE, BUILDING_ENTRANCE_DOORS, VESTIBULE_ENTRANCE } from './buildingFacadeLayout';
+
 export const LOT = {
   minX: -32,
   maxX: 32,
@@ -22,7 +24,6 @@ export const BUILDING = {
   frontZ: -34,
   centerY: 6.5,
   centerZ: -44,
-  entranceWidth: 7,
 } as const;
 
 export const CROSSWALK = { z: -27, width: 10, depth: 2.4 } as const;
@@ -48,23 +49,42 @@ export const APPROACH_CART_OBSTACLES = [
   { x: -2.8, z: -15 },
 ] as const;
 
-/** South aisle entry — clear of quest patrols at (−7.5, 8) and cross-aisle traffic at z ≈ 16. */
-export const WAREHOUSE_INTERIOR_SPAWN = { x: -7.5, z: 18, yaw: Math.PI } as const;
+/**
+ * Just inside the west member-entrance door (south wall, x = VESTIBULE_ENTRANCE.x),
+ * facing north (+Z) into the store. yaw = PI → forwardZ = -cos(PI) = +1 (north).
+ * z = WH_MIN_Z (-28) + ~3.5 so the cart clears the south wall + door frame.
+ */
+export const WAREHOUSE_INTERIOR_SPAWN = { x: VESTIBULE_ENTRANCE.x, z: -24.5, yaw: Math.PI } as const;
 
-export const ENTRANCE_ZONE = {
-  minX: -BUILDING.entranceWidth / 2 - 0.4,
-  maxX: BUILDING.entranceWidth / 2 + 0.4,
+export const ENTRANCE_Z_BAND = {
   minZ: BUILDING.frontZ - 0.8,
   maxZ: BUILDING.frontZ + 2.2,
   maxSpeed: 3.5,
 } as const;
 
-export const ENTRANCE_MARKER = {
-  x: 0,
-  z: BUILDING.frontZ + 1.1,
-  width: BUILDING.entranceWidth,
-  depth: 2.4,
-} as const;
+export function isAtEntranceDoor(x: number, z: number, speed: number): boolean {
+  if (z < ENTRANCE_Z_BAND.minZ || z > ENTRANCE_Z_BAND.maxZ || speed > ENTRANCE_Z_BAND.maxSpeed) return false;
+  return BUILDING_ENTRANCE_DOORS.some(
+    (door) => x >= door.x - door.w / 2 - 0.4 && x <= door.x + door.w / 2 + 0.4,
+  );
+}
+
+/** Green entry mat at the west member entrance. */
+export const ENTRANCE_MARKERS = [
+  {
+    id: 'entrance-west',
+    x: BUILDING_ENTRANCE.x,
+    z: BUILDING.frontZ + 1.1,
+    width: BUILDING_ENTRANCE.w,
+    depth: 2.4,
+  },
+] as const;
+
+/** @deprecated use isAtEntranceDoor */
+export const ENTRANCE_ZONE = ENTRANCE_Z_BAND;
+
+/** @deprecated use ENTRANCE_MARKERS */
+export const ENTRANCE_MARKER = ENTRANCE_MARKERS[0];
 
 export const CAR_COLORS = [
   '#2b2f36', // graphite

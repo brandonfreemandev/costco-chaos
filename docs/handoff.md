@@ -1,12 +1,28 @@
 # Costco Chaos — Handoff (Transition to Next Tool)
 
-> **Updated:** 2026-06-21  
+> **Updated:** 2026-06-22  
 > **Repo:** `https://github.com/brandonfreemandev/costco-chaos.git`  
 > **Local:** `/Users/brandonfreeman/Desktop/costco-chaos`  
 > **Active branch:** `main`  
-> **Last commit:** `fd622d1` — Add npm run deploy script  
+> **Last commit:** `f86a397` — Deploy wrangler uploads to production main branch  
 > **Name:** `costco-chaos` only — **`costcore` is dead**  
 > **Live:** https://costco-chaos.pages.dev (Cloudflare Pages)
+
+---
+
+## 🔴 ACTIVE WORK — Interior vestibule (Opus / next agent)
+
+**Owner (2026-06-22):** Exterior parking-lot facade looks decent. **Interior still broken** — exit door on wrong wall (south instead of west), entrance/exit don't match exterior, other layout issues. Some checkout text mirroring was fixed; door placement was not.
+
+**Read this first:** [`docs/agent-handoff-interior-vestibule.md`](./agent-handoff-interior-vestibule.md)
+
+**TL;DR for the fix:**
+
+1. Costco west member vestibule = **entrance + exit on the west wall** (`−X`), side-by-side — same as `CostcoBuilding` exterior (`buildingFacadeLayout.ts`).
+2. Today interior puts the **only** exit on the **south wall** (`CheckoutBackWall` at `WH_MIN_Z`) — **wrong**. No interior entrance door mesh.
+3. Parking shell (z≈−34) and warehouse (south wall z=−28) are **disconnected**; spawn is center aisle `{−4, −17.2}` not west doors.
+4. Checkout stays at **front** (−Z cap, ~9 m deep, 2.5 m belts) — do **not** move to north/back.
+5. Uncommitted layout files — see git status; commit after fix (ask user).
 
 ---
 
@@ -44,10 +60,11 @@ git add -A && git commit -m "..." && git push   # back up to GitHub
 
 **Top remaining gaps (ordered by impact):**
 
-1. **Visual polish** — "Feels like the 90s." Procedural boxes + wallpaper shelves + capsule NPCs. User wants browser-shooter-level juice (feedback, lighting, personality) without slideshow FPS.
-2. **Damage model** — `mechanics.pseudocode` §1 wants impact = relative-velocity × cartLoad mapped to 1–15 MH. Currently flat ~6/bump. Velocity-scaled damage would add nuance.
+1. **Interior vestibule / checkout layout** — west doors must match exterior; see `agent-handoff-interior-vestibule.md`. **Blocking** user acceptance.
+2. **Visual polish** — "Feels like the 90s." Procedural boxes + wallpaper shelves + capsule NPCs. User wants browser-shooter-level juice (feedback, lighting, personality) without slideshow FPS.
+3. **Damage model** — `mechanics.pseudocode` §1 wants impact = relative-velocity × cartLoad mapped to 1–15 MH. Currently flat ~6/bump. Velocity-scaled damage would add nuance.
 
-**Recently shipped (2026-06-21):** Cloudflare hosting migration, comedy SKU rack
+**Recently shipped (2026-06-21–22):** Cloudflare hosting migration, comedy SKU rack
 labels (width-clipped, 1024px canvas), 24+ bump toasts, spouse SMS interlude,
 god mode (G), double-sided ceiling signs, scaled DEAL tags, gap-filler facades.
 Humor copy is in good shape now.
@@ -200,9 +217,11 @@ Name tags are Billboard Text rendered inside `NPC.tsx`. They appear when the pla
 
 | File | Contents |
 |---|---|
-| `parkingLotLayout.ts` | `PLAYER_SPAWN {0,18}`, door `ENTRANCE_ZONE`, `WAREHOUSE_INTERIOR_SPAWN {-7.5,23}` |
-| `warehouseLayout.ts` | 6 aisles, rack spines, maze blocks, cross-aisles |
-| `checkoutLayout.ts` | 6 lanes at x = ±2.5, ±7.5, ±12.5; queue slot spacing 1.9m; max visible queue 4 |
+| `buildingFacadeLayout.ts` | **West vestibule door X** — entrance `−15`, exit `−10.5`, shared door heights, clerestory windows |
+| `BuildingSideDoorBank.tsx` | `VestibuleDoor`, `BuildingWestVestibuleExterior` (parking), `BuildingWestVestibuleInterior` (warehouse — **currently on south wall, wrong**) |
+| `parkingLotLayout.ts` | `BUILDING.frontZ −34`, `PLAYER_SPAWN {0,18}`, `WAREHOUSE_INTERIOR_SPAWN {−4, −17.2}` |
+| `warehouseLayout.ts` | Racetrack; `WH_MIN_Z −28` (south/front); `SOUTH_FRONT_CAP 9`; fresh food on **north** wall |
+| `checkoutLayout.ts` | Front checkout cap `CHECKOUT_NORTH_EDGE_Z −19`; belts **2.5 m**; south-wall exit wall (**needs move to west**) |
 
 ---
 
@@ -281,8 +300,9 @@ Files to touch: `systems/handleCollision.ts`, `systems/npcBumps.ts` (to pass rel
 
 ## Git state
 
-**Last commit:** `fd622d1` — Add npm run deploy script  
-**Branch:** `main` — pushed to origin (GitHub is the backup; commit + push often).
+**Last commit:** `f86a397` — Deploy wrangler uploads to production main branch  
+**Branch:** `main` — **uncommitted** vestibule/checkout layout work (see `git status`).  
+**New files:** `buildingFacadeLayout.ts`, `BuildingSideDoorBank.tsx`
 
 **Before pushing:** `git status`, `npm run build`, ask user before commit.
 
@@ -301,6 +321,7 @@ Files to touch: `systems/handleCollision.ts`, `systems/npcBumps.ts` (to pass rel
 | Doc | Trust level |
 |---|---|
 | **This file** | Source of truth for transition |
+| **`agent-handoff-interior-vestibule.md`** | **Current P0** — interior door/checkout layout for Opus |
 | `mechanics.pseudocode` | Sample + checkout design intent — §1 (damage) partially implemented, §2 (samples) fully done, §3 (checkout) fully done |
 | `architecture.md` | Partially stale |
 | `aesthetic_guidelines.md` | Tone target good; UI section describes current sidebar |
@@ -311,11 +332,11 @@ Files to touch: `systems/handleCollision.ts`, `systems/npcBumps.ts` (to pass rel
 
 ## Suggested priority for next tool (ordered)
 
-1. **Playtest** — 30s script above, confirm audio and name tags work in-browser.
-2. **Camera punch on bump** — single most impactful feel improvement; 10-line change in `FirstPersonCartCamera.tsx`.
-3. **Velocity-scaled damage** — `handleCollision.ts` + `npcBumps.ts`; makes the game feel more physical.
-4. **Selective bloom** — `@react-three/postprocessing`, emissive targets only; test FPS on low-end first.
-5. **Commit + push + `npm run deploy`** — back up and ship after each change.
+1. **Interior west vestibule** — `agent-handoff-interior-vestibule.md`; match exterior doors; fix spawn.
+2. **Playtest** — 30s script + interior script in vestibule handoff.
+3. **Camera punch on bump** — `FirstPersonCartCamera.tsx`.
+4. **Velocity-scaled damage** — `handleCollision.ts` + `npcBumps.ts`.
+5. **Commit + push + `npm run deploy`** — layout work is uncommitted; ask user before commit.
 
 ---
 

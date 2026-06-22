@@ -1,0 +1,41 @@
+---
+description: Cloudflare Pages deploy must target production (main), not preview only
+alwaysApply: true
+---
+
+# Cloudflare Pages deploy
+
+**Live site:** https://costco-chaos.pages.dev
+
+## Always deploy to production
+
+`wrangler pages deploy` without `--branch main` creates a **preview** deployment only. Production stays on the old build (users see stale assets, e.g. missing GLBs).
+
+```bash
+# ✅ Correct — updates costco-chaos.pages.dev
+npm run deploy
+
+# ✅ Equivalent
+npm run build:cf && npx wrangler pages deploy dist --project-name costco-chaos --branch main
+
+# ❌ Wrong — preview only, production unchanged
+npx wrangler pages deploy dist --project-name costco-chaos
+```
+
+## Workflow after shippable changes
+
+1. `npm run build` (or `validate:routes` when touching nav)
+2. Commit + push to GitHub (`main` or merge feature branch to `main`)
+3. `npm run deploy` — must use `--branch main` (wired in `package.json`)
+
+## Build base path
+
+- **Cloudflare / production:** `VITE_BASE=/` via `build:cf` — never bare `npm run build` for deploy
+- **Local dev:** default `/costco-chaos/` in `vite.config.ts`
+
+## Verify production
+
+```bash
+curl -sI https://costco-chaos.pages.dev/models/cars/prius.glb | grep content-type
+# expect: model/gltf-binary (not text/html)
+```

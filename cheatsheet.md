@@ -24,8 +24,9 @@ Hosted on **Cloudflare Pages** at https://costco-chaos.pages.dev — one command
 npm run deploy
 ```
 
-That runs `VITE_BASE=/ npm run build` then `wrangler pages deploy dist`. The
-`OLLAMA_API_KEY` secret lives in the Cloudflare project and persists across
+That runs `VITE_BASE=/ npm run build` then `wrangler pages deploy dist --branch main`.
+Preview-only deploys do **not** update https://costco-chaos.pages.dev — always use `npm run deploy`.
+The `OLLAMA_API_KEY` secret lives in the Cloudflare project and persists across
 deploys — you never re-enter it.
 
 Then back up to GitHub:

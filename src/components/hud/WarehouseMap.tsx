@@ -2,7 +2,7 @@ import { useGameStore } from '../../stores/gameStore';
 import { usePlayerStore } from '../../stores/playerStore';
 import { useCartTransformStore } from '../../stores/cartTransformStore';
 import { CHECKOUT_MEZZANINE } from '../scene/checkoutLayout';
-import { FRONT_COURT_MIN_Z, CROSS_AISLES_Z, RACETRACK_LOOP, WH_DEPTH, WH_MAX_Z, WH_MIN_X, WH_WIDTH } from '../scene/warehouseLayout';
+import { CROSS_AISLES_Z, RACETRACK_LOOP, WH_DEPTH, WH_MAX_Z, WH_MIN_X, WH_WIDTH } from '../scene/warehouseLayout';
 
 const MAP_W = 168;
 const MAP_H = Math.round((WH_DEPTH / WH_WIDTH) * MAP_W);
@@ -36,7 +36,6 @@ export function WarehouseMap({ floating = false }: { floating?: boolean }) {
   const coolerD = 7;
   const mezzW = CHECKOUT_MEZZANINE.maxX - CHECKOUT_MEZZANINE.minX;
   const mezzD = CHECKOUT_MEZZANINE.maxZ - CHECKOUT_MEZZANINE.minZ;
-  const courtD = WH_MAX_Z - FRONT_COURT_MIN_Z;
 
   return (
     <section className={floating ? 'float-hud float-hud-map' : 'sidebar-section warehouse-map-section'}>
@@ -78,14 +77,6 @@ export function WarehouseMap({ floating = false }: { floating?: boolean }) {
         />
 
         <rect
-          x={toMapX(WH_MIN_X + 1)}
-          y={toMapY(WH_MAX_Z)}
-          width={((WH_WIDTH - 2) / WH_WIDTH) * MAP_W}
-          height={(courtD / WH_DEPTH) * MAP_H}
-          className="map-front-court"
-          rx={2}
-        />
-        <rect
           x={toMapX(CHECKOUT_MEZZANINE.minX)}
           y={toMapY(CHECKOUT_MEZZANINE.maxZ)}
           width={(mezzW / WH_WIDTH) * MAP_W}
@@ -104,7 +95,7 @@ export function WarehouseMap({ floating = false }: { floating?: boolean }) {
 
         <rect
           x={toMapX(-11 - coolerW / 2)}
-          y={toMapY(-24 + coolerD / 2)}
+          y={toMapY(24 - coolerD / 2)}
           width={(coolerW / WH_WIDTH) * MAP_W}
           height={(coolerD / WH_DEPTH) * MAP_H}
           className="map-cooler"
@@ -140,7 +131,7 @@ export function WarehouseMap({ floating = false }: { floating?: boolean }) {
 
       {!floating && (
         <p className="map-hint">
-          North (top) = entrance &amp; checkout. Complete your list, then drive north.
+          Bottom of map = entrance &amp; checkout. Shop north to the back, then return here to check out.
         </p>
       )}
     </section>

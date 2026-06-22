@@ -1,31 +1,37 @@
 import { Text } from '@react-three/drei';
 import { useGameStore } from '../../stores/gameStore';
 import { useCheckoutStore } from '../../stores/checkoutStore';
-import { FRONT_COURT_MIN_Z, WH_CEILING, WH_MAX_X, WH_MAX_Z, WH_MIN_X } from './warehouseLayout';
+import { WH_CEILING, WH_MAX_X, WH_MIN_X } from './warehouseLayout';
 import {
   CHECKOUT_APPROACH,
-  CHECKOUT_BACK_WALL_Z,
-  CHECKOUT_FACADE_Z,
-  CHECKOUT_LANE_IDS,
-  CHECKOUT_LANE_X,
   CHECKOUT_BELT_LENGTH,
   CHECKOUT_BELT_ORIGIN_Z,
+  CHECKOUT_VESTIBULE_DOORS,
+  CHECKOUT_EXIT_WALL_Z,
+  CHECKOUT_FACADE_LINTEL_Y,
+  CHECKOUT_FACADE_Z,
   CHECKOUT_MEZZANINE,
+  CHECKOUT_NORTH_EDGE_Z,
+  CHECKOUT_VESTIBULE_MIN_Z,
+  CHECKOUT_WALL_THICK,
+  CHECKOUT_LANE_IDS,
+  CHECKOUT_LANE_X,
   MAX_VISIBLE_QUEUE,
   QUEUE_SLOT_SPACING,
+  checkoutWallFillSegments,
   queueSlotZ,
 } from './checkoutLayout';
 import { CashierAvatar, ShopperAvatar, cashierLook, queueNpcLook } from './ShopperAvatar';
+import { BuildingWestVestibuleInterior } from './BuildingSideDoorBank';
+import { VESTIBULE_ENTRANCE, VESTIBULE_EXIT } from './buildingFacadeLayout';
 
-/** Face toward shoppers approaching from the warehouse (south / −Z). */
-const FACE_SHOPPER: [number, number, number] = [0, Math.PI, 0];
+/** Face +Z so shoppers approaching from the warehouse (north) read labels correctly. */
+const FACE_SHOPPER: [number, number, number] = [0, 0, 0];
 
 const STEEL = { color: '#374151', roughness: 0.35, metalness: 0.48 };
 const BELT = { color: '#1f2937', roughness: 0.55, metalness: 0.35 };
 
-/** Customer / cart side — west of belt (−X). They unload eastward onto the belt. */
 const CUSTOMER_SIDE_X = -0.72;
-/** Cashier stands on the opposite (east, +X) side of the belt, facing the customers. */
 const CASHIER_SIDE_X = 0.8;
 const BELT_WIDTH = 0.72;
 
@@ -63,10 +69,7 @@ function isRegisterBusy(lane: { processingRemaining: number; priceCheckRemaining
   return lane.processingRemaining > 0 || lane.priceCheckRemaining > 0;
 }
 
-/**
- * One continuous checkout surface: steel deck + conveyor belt running north toward the exit wall.
- * Cashier stands on the west side at the north end — behind the belt, facing the right wall (+X).
- */
+/** Belt runs south into the vestibule; register sits on the north end (room before the back wall). */
 function LaneRegister({
   priceCheck,
   isOpen,
@@ -83,11 +86,10 @@ function LaneRegister({
   beltLen: number;
 }) {
   const beltHalf = beltLen / 2;
-  const northEndZ = beltLen - 0.25;
+  const registerZ = beltLen - 0.25;
 
   return (
     <group position={[0, 0, beltOriginZ]}>
-      {/* Unified checkout deck — no separate cashier table */}
       <mesh castShadow position={[0, 0.34, beltHalf]}>
         <boxGeometry args={[BELT_WIDTH, 0.68, beltLen]} />
         <meshStandardMaterial {...STEEL} />
@@ -104,12 +106,11 @@ function LaneRegister({
         </mesh>
       ))}
 
-      {/* Scanner / POS on belt at north end */}
-      <mesh position={[0.08, 0.92, northEndZ]}>
+      <mesh position={[0.08, 0.92, registerZ]}>
         <boxGeometry args={[0.24, 0.16, 0.2]} />
         <meshStandardMaterial color="#0f172a" roughness={0.4} />
       </mesh>
-      <mesh position={[0.08, 0.99, northEndZ + 0.04]}>
+      <mesh position={[0.08, 0.99, registerZ + 0.04]}>
         <boxGeometry args={[0.2, 0.11, 0.02]} />
         <meshStandardMaterial
           color="#1e293b"
@@ -118,164 +119,92 @@ function LaneRegister({
         />
       </mesh>
 
-      {/* Cashier on the east side of the belt at the north end, facing −X across the
-          belt toward the customers unloading on the west side. */}
-      <group position={[CASHIER_SIDE_X, 0, northEndZ]}>
+      <group position={[CASHIER_SIDE_X, 0, registerZ]}>
         <CashierAvatar skinTone={clerk.skin} hairColor={clerk.hair} rotationY={Math.PI / 2} />
       </group>
 
       {!isOpen && (
         <>
-          <mesh position={[0, 1.05, northEndZ + 0.15]}>
+          <mesh position={[0, 1.05, registerZ + 0.15]}>
             <boxGeometry args={[0.85, 0.35, 0.04]} />
             <meshStandardMaterial color="#450a0a" emissive="#991b1b" emissiveIntensity={0.4} />
           </mesh>
-          <CheckoutLabel position={[0, 1.05, northEndZ + 0.18]} fontSize={0.16} color="#fecaca">
+          <CheckoutLabel position={[0, 1.05, registerZ + 0.18]} fontSize={0.16} color="#fecaca">
             CLOSED
           </CheckoutLabel>
         </>
       )}
 
-      <CheckoutLabel position={[0, 1.55, northEndZ + 0.1]} fontSize={0.22} color={isOpen ? '#fde047' : '#94a3b8'}>
+      <CheckoutLabel position={[0, 1.55, registerZ + 0.1]} fontSize={0.22} color={isOpen ? '#fde047' : '#94a3b8'}>
         {`LANE ${laneId}`}
       </CheckoutLabel>
     </group>
   );
 }
 
-/** Exit facade — windows + EXIT doors on the store-facing (south) side of the back wall. */
+function CheckoutVestibule() {
+  const vestZ = (CHECKOUT_VESTIBULE_MIN_Z + CHECKOUT_BELT_ORIGIN_Z) / 2;
+  const vestD = CHECKOUT_BELT_ORIGIN_Z - CHECKOUT_VESTIBULE_MIN_Z;
+
+  return (
+    <group>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.018, vestZ]}>
+        <planeGeometry args={[WH_MAX_X - WH_MIN_X - 4, vestD]} />
+        <meshStandardMaterial color="#d4ccc0" roughness={0.82} />
+      </mesh>
+
+      {[-6, -2, 2].map((x) => (
+        <mesh key={`kiosk-${x}`} position={[x, 0.55, CHECKOUT_VESTIBULE_MIN_Z + vestD * 0.62]} castShadow>
+          <boxGeometry args={[1.1, 1.1, 0.55]} />
+          <meshStandardMaterial color="#475569" roughness={0.55} metalness={0.25} />
+        </mesh>
+      ))}
+
+      <CheckoutLabel position={[-4, 1.35, CHECKOUT_VESTIBULE_MIN_Z + vestD * 0.5]} fontSize={0.14} color="#cbd5e1">
+        TRAVEL · BLINDS · KIOSKS → EXIT
+      </CheckoutLabel>
+    </group>
+  );
+}
+
+/** South exit wall — west receipt-check door aligned with parking-lot exit. */
 function CheckoutBackWall() {
-  const wallW = WH_MAX_X - WH_MIN_X;
   const wallH = WH_CEILING - 0.4;
-  const wallZ = CHECKOUT_BACK_WALL_Z;
-  /** Store interior side — shoppers approach from −Z and see this face. */
+  const wallZ = CHECKOUT_EXIT_WALL_Z;
   const facadeZ = CHECKOUT_FACADE_Z;
   const wallY = wallH / 2;
-  const thick = 0.5;
-
-  const doorSpecs = [
-    { x: -15, w: 3.4 },
-    { x: 15, w: 3.4 },
-  ];
-
-  const windowCols = [-10, -5, 0, 5, 10];
-
-  /** Fill wall horizontally, skipping door openings below the lintel. */
-  const lintelY = 3.05;
+  const lintelY = CHECKOUT_FACADE_LINTEL_Y;
   const lintelH = wallH - lintelY;
-  const segments: { x: number; w: number }[] = [];
-  let cursor = WH_MIN_X + 0.25;
-  for (const { x, w } of [...doorSpecs].sort((a, b) => a.x - b.x)) {
-    const gap0 = x - w / 2;
-    const gap1 = x + w / 2;
-    if (gap0 > cursor) segments.push({ x: (cursor + gap0) / 2, w: gap0 - cursor });
-    cursor = gap1;
-  }
-  if (WH_MAX_X - 0.25 > cursor) {
-    segments.push({ x: (cursor + WH_MAX_X - 0.25) / 2, w: WH_MAX_X - 0.25 - cursor });
-  }
+  const segments = checkoutWallFillSegments();
 
   return (
     <group>
       {segments.map(({ x, w }, i) => (
         <mesh key={`seg-${i}`} position={[x, wallY, wallZ]} receiveShadow castShadow>
-          <boxGeometry args={[w, wallH, thick]} />
+          <boxGeometry args={[w, wallH, CHECKOUT_WALL_THICK]} />
           <meshStandardMaterial color="#6b7280" roughness={0.88} />
         </mesh>
       ))}
 
-      {doorSpecs.map(({ x, w }) => (
+      {CHECKOUT_VESTIBULE_DOORS.map(({ x, w }) => (
         <mesh key={`lintel-${x}`} position={[x, lintelY + lintelH / 2, wallZ]} receiveShadow castShadow>
-          <boxGeometry args={[w + 0.4, lintelH, thick]} />
+          <boxGeometry args={[w + 0.4, lintelH, CHECKOUT_WALL_THICK]} />
           <meshStandardMaterial color="#6b7280" roughness={0.88} />
         </mesh>
       ))}
 
-      <mesh position={[0, 1.25, facadeZ]}>
-        <boxGeometry args={[wallW - 0.5, 2.5, 0.14]} />
-        <meshStandardMaterial color="#c4b5a5" roughness={0.92} />
-      </mesh>
+      <BuildingWestVestibuleInterior facadeZ={facadeZ} />
 
-      {windowCols.map((x, i) => (
-        <group key={`win-${i}`} position={[x, 4.75, facadeZ - 0.12]}>
-          <mesh renderOrder={3}>
-            <boxGeometry args={[3.6, 1.65, 0.18]} />
-            <meshStandardMaterial
-              color="#7dd3fc"
-              emissive="#0ea5e9"
-              emissiveIntensity={1.1}
-              roughness={0.05}
-              metalness={0.2}
-            />
-          </mesh>
-          <mesh position={[0, 0, -0.02]}>
-            <boxGeometry args={[3.75, 1.78, 0.06]} />
-            <meshStandardMaterial color="#1e293b" roughness={0.4} metalness={0.55} />
-          </mesh>
-          <mesh position={[0, 0, 0.06]}>
-            <boxGeometry args={[0.08, 1.65, 0.04]} />
-            <meshStandardMaterial color="#334155" metalness={0.6} roughness={0.35} />
-          </mesh>
-          <mesh position={[0, 0, 0.06]}>
-            <boxGeometry args={[3.6, 0.08, 0.04]} />
-            <meshStandardMaterial color="#334155" metalness={0.6} roughness={0.35} />
-          </mesh>
-        </group>
-      ))}
-
-      {doorSpecs.map(({ x, w }) => (
-        <group key={`door-${x}`} position={[x, 0, facadeZ - 0.15]}>
-          <mesh position={[0, 1.55, 0]}>
-            <boxGeometry args={[w + 0.45, 3.15, 0.2]} />
-            <meshStandardMaterial color="#1e293b" roughness={0.4} metalness={0.55} />
-          </mesh>
-          <mesh position={[0, 1.45, -0.06]}>
-            <boxGeometry args={[w - 0.15, 2.9, 0.28]} />
-            <meshStandardMaterial color="#020617" roughness={1} />
-          </mesh>
-          <mesh position={[-w * 0.22, 1.45, 0.08]}>
-            <boxGeometry args={[w * 0.44, 2.7, 0.07]} />
-            <meshStandardMaterial
-              color="#e0f2fe"
-              emissive="#38bdf8"
-              emissiveIntensity={0.45}
-              roughness={0.1}
-              metalness={0.35}
-              transparent
-              opacity={0.75}
-            />
-          </mesh>
-          <mesh position={[w * 0.22, 1.45, 0.08]}>
-            <boxGeometry args={[w * 0.44, 2.7, 0.07]} />
-            <meshStandardMaterial
-              color="#e0f2fe"
-              emissive="#38bdf8"
-              emissiveIntensity={0.45}
-              roughness={0.1}
-              metalness={0.35}
-              transparent
-              opacity={0.75}
-            />
-          </mesh>
-          <mesh position={[0, 2.98, 0.14]} renderOrder={4}>
-            <boxGeometry args={[w * 0.82, 0.48, 0.1]} />
-            <meshStandardMaterial color="#dc2626" emissive="#ef4444" emissiveIntensity={1.6} roughness={0.4} />
-          </mesh>
-          <CheckoutLabel position={[0, 2.98, 0.16]} fontSize={0.26} color="#fff">
-            EXIT
-          </CheckoutLabel>
-          <pointLight position={[0, 2.2, 0.55]} intensity={0.7} color="#fef9c3" distance={7} decay={2} />
-        </group>
-      ))}
-
-      <CheckoutLabel position={[0, 6.2, facadeZ - 0.1]} fontSize={0.3} color="#f1f5f9">
+      <CheckoutLabel position={[VESTIBULE_ENTRANCE.x, 6.2, facadeZ + 0.08]} fontSize={0.26} color="#bbf7d0">
+        ← MEMBER ENTRANCE
+      </CheckoutLabel>
+      <CheckoutLabel position={[VESTIBULE_EXIT.x, 6.2, facadeZ + 0.08]} fontSize={0.28} color="#f1f5f9">
         RECEIPT CHECK →
       </CheckoutLabel>
     </group>
   );
 }
 
-/** Ground-level front-court checkout — belts along exit wall, queues into store. */
 export function CheckoutMezzanine() {
   const shoppingListComplete = useGameStore((s) => s.shoppingListComplete);
   const phase = useGameStore((s) => s.phase);
@@ -290,13 +219,13 @@ export function CheckoutMezzanine() {
   const centerZ = (minZ + maxZ) / 2;
   const deckD = maxZ - minZ;
   const courtW = WH_MAX_X - WH_MIN_X - 2;
-  const courtD = WH_MAX_Z - FRONT_COURT_MIN_Z;
+  const courtD = CHECKOUT_NORTH_EDGE_Z - CHECKOUT_VESTIBULE_MIN_Z;
   const beltOriginZ = CHECKOUT_BELT_ORIGIN_Z;
   const beltLen = CHECKOUT_BELT_LENGTH;
 
   return (
     <group>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, FRONT_COURT_MIN_Z + courtD / 2]}>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, CHECKOUT_VESTIBULE_MIN_Z + courtD / 2]}>
         <planeGeometry args={[courtW, courtD]} />
         <meshStandardMaterial
           color={active ? '#d1d9e6' : '#bcc6d4'}
@@ -312,19 +241,21 @@ export function CheckoutMezzanine() {
       </mesh>
 
       <CheckoutLabel
-        position={[0, 2.8, CHECKOUT_APPROACH.minZ + 0.8]}
+        position={[0, 2.8, CHECKOUT_APPROACH.maxZ - 0.6]}
         fontSize={0.32}
         color={active ? '#fde047' : '#64748b'}
       >
-        {active ? 'CHECKOUT AHEAD — drive north ↑' : 'CHECKOUT (complete list first)'}
+        {active ? 'CHECKOUT AHEAD — entrance end ↓' : 'CHECKOUT (complete list first)'}
       </CheckoutLabel>
 
-      <CheckoutLabel position={[0, 3.4, FRONT_COURT_MIN_Z + 1.2]} fontSize={0.55} color="#f8fafc">
+      <CheckoutLabel position={[0, 3.4, CHECKOUT_NORTH_EDGE_Z - 1.2]} fontSize={0.55} color="#f8fafc">
         CHECKOUT
       </CheckoutLabel>
-      <CheckoutLabel position={[0, 2.75, FRONT_COURT_MIN_Z + 1.5]} fontSize={0.2} color="#cbd5e1" maxWidth={14}>
-        {active ? 'Unload on belt · cart to your right · press 1–6 for lanes' : 'Complete your list first'}
+      <CheckoutLabel position={[0, 2.75, CHECKOUT_NORTH_EDGE_Z - 0.9]} fontSize={0.2} color="#cbd5e1" maxWidth={14}>
+        {active ? 'Unload on belt · roll to exit vestibule · press 1–6 for lanes' : 'Complete your list first'}
       </CheckoutLabel>
+
+      <CheckoutVestibule />
 
       {CHECKOUT_LANE_X.map((laneX, i) => {
         const laneId = CHECKOUT_LANE_IDS[i];
@@ -338,7 +269,6 @@ export function CheckoutMezzanine() {
 
         return (
           <group key={laneId} position={[laneX, 0, 0]}>
-            {/* Queue pad — west side where shoppers unload onto belt */}
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[CUSTOMER_SIDE_X, 0.03, beltOriginZ + beltLen / 2]}>
               <planeGeometry args={[1.25, beltLen + 0.8]} />
               <meshStandardMaterial
@@ -362,23 +292,19 @@ export function CheckoutMezzanine() {
               (() => {
                 const totalInLine = customersAhead + (registerBusy ? 1 : 0);
                 const visible = Math.min(totalInLine, MAX_VISIBLE_QUEUE);
-                // anim: 0 = just advanced (NPCs at old Z), 1 = fully settled (NPCs at new Z)
                 const anim = laneAdvanceAnim[laneId] ?? 1;
                 const slideOffset = (1 - anim) * QUEUE_SLOT_SPACING;
-                return Array.from({ length: visible }).map((_, q) => {
-                  const look = queueNpcLook(laneId, q);
-                  return (
-                    <group key={`q-${q}`} position={[CUSTOMER_SIDE_X, 0, queueSlotZ(q) - slideOffset]} rotation={[0, 0, 0]}>
-                      <ShopperAvatar
-                        shirtColor={look.shirt}
-                        skinTone={look.skin}
-                        hairColor={look.hair}
-                        hasCart={q > 0 || registerBusy}
-                        animate={false}
-                      />
-                    </group>
-                  );
-                });
+                return Array.from({ length: visible }).map((_, q) => (
+                  <group key={`q-${q}`} position={[CUSTOMER_SIDE_X, 0, queueSlotZ(q) - slideOffset]} rotation={[0, 0, 0]}>
+                    <ShopperAvatar
+                      shirtColor={queueNpcLook(laneId, q).shirt}
+                      skinTone={queueNpcLook(laneId, q).skin}
+                      hairColor={queueNpcLook(laneId, q).hair}
+                      hasCart={q > 0 || registerBusy}
+                      animate={false}
+                    />
+                  </group>
+                ));
               })()}
 
             {isPlayerLane && phase === 'CHECKOUT' && !beingServed && slotsFromFront > 0 && (
@@ -406,7 +332,6 @@ export function CheckoutMezzanine() {
         );
       })}
 
-      {/* Render exit facade last so doors/windows sit in front of belts */}
       <CheckoutBackWall />
     </group>
   );

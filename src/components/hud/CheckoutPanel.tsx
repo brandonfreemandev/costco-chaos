@@ -28,7 +28,7 @@ export function CheckoutPanel({ floating = false }: { floating?: boolean }) {
       <div className={labelClass}>Checkout Lanes</div>
       {!showLaneGrid ? (
         <p className="objective-copy">
-          After your list is complete, drive north through the front court to the checkout lanes.
+          After your list is complete, return to the checkout lanes at the entrance end of the warehouse.
         </p>
       ) : (
         <>
