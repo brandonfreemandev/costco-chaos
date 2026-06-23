@@ -8,6 +8,7 @@ import { generateWarehouseNPCs } from './CulledNPC';
 import { NpcCrowd } from './NpcCrowd';
 import { invalidateWarehouseObstacleCache } from '../../systems/staticObstacles';
 import { SampleKiosk } from './SampleKiosk';
+import { VitamixBooth } from './VitamixBooth';
 import { WarehouseCeilingLights } from './WarehouseCeilingLights';
 import { WarehouseFloorGlow } from './WarehouseFloorGlow';
 import { CheckoutMezzanine } from './CheckoutMezzanine';
@@ -223,6 +224,8 @@ export function WarehouseAisles() {
       {SAMPLE_KIOSKS.map((kiosk) => (
         <SampleKiosk key={kiosk.id} kiosk={kiosk} />
       ))}
+
+      <VitamixBooth />
 
       {import.meta.env.DEV && walkGraphVisible && <WalkabilityGraphOverlay />}
 

@@ -10,6 +10,7 @@ import { GameSidebar } from './components/hud/GameSidebar';
 import { GameHud } from './components/hud/GameHud';
 import { EndScreen } from './components/hud/EndScreen';
 import { PhoneInterlude } from './components/hud/PhoneInterlude';
+import { EncounterOverlay } from './components/hud/EncounterOverlay';
 import { BumpFlash } from './components/hud/BumpFlash';
 import { LoadingScreen } from './components/hud/LoadingScreen';
 import { ChaosTestPanel } from './components/hud/ChaosTestPanel';
@@ -41,6 +42,7 @@ export default function App() {
       <LoadingScreen />
       <EndScreen />
       <PhoneInterlude />
+      <EncounterOverlay />
       <div className="game-layout">
         <GameSidebar />
         <div className="viewport-column">

@@ -3,6 +3,7 @@ import type { GamePhase } from '../types/state';
 import { useCheckoutStore } from './checkoutStore';
 import { usePlayerStore } from './playerStore';
 import { useSampleStationStore } from './sampleStationStore';
+import { useEncounterStore } from './encounterStore';
 import { grantSpawnBumpGrace, resetNpcBumpCooldowns } from '../systems/handleCollision';
 
 interface GameStore {
@@ -139,6 +140,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     logTransition('Session reset');
     useSampleStationStore.getState().reset();
     useCheckoutStore.getState().reset();
+    useEncounterStore.getState().reset();
     set({
       phase: 'MENU',
       audioUnlocked: false,
