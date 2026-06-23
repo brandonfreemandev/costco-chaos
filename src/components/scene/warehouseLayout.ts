@@ -81,22 +81,23 @@ export interface RackSegment {
  */
 export type CenterRackDept = 'electronics' | 'seasonal' | 'grocery' | 'household' | 'bulkPaper';
 
+// Index 0 = z −14 = FRONT (south, by the checkstands); index 5 = z 13.5 = BACK (north).
 export const RACK_PAIR_WEST_DEPARTMENTS: CenterRackDept[] = [
-  'household', // −14  back hardlines
-  'bulkPaper', // −8.5 outside-track staples (TP, towels)
-  'household', // −3   cleaning / paper goods
-  'seasonal', // 2.5  center-court treasure-hunt
-  'seasonal', // 8    home / lifestyle
-  'electronics', // 13.5 front luxe — TVs west as you enter
+  'electronics', // −14  FRONT — TVs/electronics by the checkstands as you enter
+  'seasonal', //   −8.5 treasure-hunt near the front
+  'household', //  −3   home / cleaning
+  'household', //   2.5  paper goods / home
+  'bulkPaper', //   8    bulk staples toward the back
+  'bulkPaper', //  13.5 BACK hardlines (TP, towels)
 ];
 
 export const RACK_PAIR_EAST_DEPARTMENTS: CenterRackDept[] = [
-  'grocery', // −14  back dry grocery / pantry
+  'grocery', // −14  FRONT food
   'grocery', // −8.5 snacks & beverages
   'grocery', // −3   center-court food
   'grocery', // 2.5  Kirkland dry grocery
-  'grocery', // 8    food toward front
-  'grocery', // 13.5 front food — not TVs
+  'grocery', // 8    pantry
+  'grocery', // 13.5 BACK dry grocery — grocery owns the entire east side
 ];
 
 export function isWestRackBlock(seg: RackSegment): boolean {
