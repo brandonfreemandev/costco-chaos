@@ -4,6 +4,7 @@ import { Text } from '@react-three/drei';
 import { COLLISION_GROUP } from '../../types/state';
 import { generateGauntletNPCs } from './CulledNPC';
 import { CostcoBuilding } from './CostcoBuilding';
+import { CartReturnSheriff } from './CartReturnSheriff';
 import { CartCorral } from './CartCorral';
 import { ParkingStripes } from './ParkingStripes';
 import { NpcCrowd } from './NpcCrowd';
@@ -211,6 +212,8 @@ export function ParkingLot() {
       </Text>
 
       <CostcoBuilding />
+
+      <CartReturnSheriff />
 
       {CART_CORRALS.map((corral) => (
         <CartCorral key={corral.id} spec={corral} />

@@ -5,6 +5,7 @@ import {
   SAMPLE_MH_RESTORE,
   SAMPLE_TAKE_RADIUS_SQ,
 } from '../systems/sampleStations';
+import { useEncounterStore } from './encounterStore';
 import { usePlayerStore } from './playerStore';
 
 const COOLDOWN_MS = 28_000;
@@ -37,6 +38,13 @@ export const useSampleStationStore = create<SampleStationState>((set, get) => ({
 
     for (const kiosk of SAMPLE_KIOSKS) {
       if (!isKioskReady(kiosk.id)) continue;
+      // Linda must confront you before the mid-aisle sample auto-collects.
+      if (
+        kiosk.id === 'sample-mid' &&
+        !useEncounterStore.getState().seen.has('sample-inquisitor')
+      ) {
+        continue;
+      }
 
       const dx = px - kiosk.x;
       const dz = pz - kiosk.z;

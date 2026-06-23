@@ -9,6 +9,8 @@ import { NpcCrowd } from './NpcCrowd';
 import { invalidateWarehouseObstacleCache } from '../../systems/staticObstacles';
 import { SampleKiosk } from './SampleKiosk';
 import { VitamixBooth } from './VitamixBooth';
+import { ExecutiveMembershipBooth } from './ExecutiveMembershipBooth';
+import { SampleInquisitorTrigger } from './SampleInquisitorTrigger';
 import { WarehouseCeilingLights } from './WarehouseCeilingLights';
 import { WarehouseFloorGlow } from './WarehouseFloorGlow';
 import { CheckoutMezzanine } from './CheckoutMezzanine';
@@ -226,6 +228,8 @@ export function WarehouseAisles() {
       ))}
 
       <VitamixBooth />
+      <ExecutiveMembershipBooth />
+      <SampleInquisitorTrigger />
 
       {import.meta.env.DEV && walkGraphVisible && <WalkabilityGraphOverlay />}
 

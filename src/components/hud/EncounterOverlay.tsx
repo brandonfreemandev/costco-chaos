@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useEncounterStore } from '../../stores/encounterStore';
+import { useGameStore } from '../../stores/gameStore';
 import { usePlayerStore } from '../../stores/playerStore';
 import {
   PERSONAS,
@@ -8,13 +9,6 @@ import {
   checkProxySignal,
   type ChatMessage,
 } from '../../services/personaChat';
-
-/** Held-hostage MH drain while the pitch runs, and the reward for committing. */
-const DRAIN_PER_TICK = 1;
-const DRAIN_INTERVAL_MS = 2000;
-const COMMIT_REWARD = 20;
-
-const COMMIT_WORDS = ['hallelujah', 'amen', 'sign me up', 'sold', 'yes', 'ok', 'okay', 'sure', "i'll take", 'i will take', 'shut up and take', 'blend'];
 
 interface Bubble {
   from: 'persona' | 'player';
@@ -26,18 +20,20 @@ export function EncounterOverlay() {
   const dismiss = useEncounterStore((s) => s.dismiss);
   const damageMH = usePlayerStore((s) => s.damageMentalHealth);
   const restoreMH = usePlayerStore((s) => s.restoreMentalHealth);
+  const addBonusItem = useGameStore((s) => s.addBonusItem);
 
   const persona = activeId ? PERSONAS[activeId] : null;
+  const mechanics = persona?.mechanics;
 
   const [bubbles, setBubbles] = useState<Bubble[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [committed, setCommitted] = useState(false);
+  const [committedFooter, setCommittedFooter] = useState('');
   const [signalOk, setSignalOk] = useState<boolean | null>(null);
   const historyRef = useRef<ChatMessage[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Seed the opening line when an encounter opens.
   useEffect(() => {
     if (!persona) return;
     const init = buildPersonaMessages(persona);
@@ -45,23 +41,35 @@ export function EncounterOverlay() {
     setBubbles([{ from: 'persona', text: persona.opening }]);
     setInput('');
     setCommitted(false);
+    setCommittedFooter('');
     setSignalOk(null);
     navigator.vibrate?.([60, 40, 60]);
     checkProxySignal().then((r) => setSignalOk(r.ok));
   }, [persona]);
 
-  // MH tug-of-war: the prophet holds you hostage until you leave or commit.
   useEffect(() => {
-    if (!persona || committed) return;
-    const id = window.setInterval(() => damageMH(DRAIN_PER_TICK), DRAIN_INTERVAL_MS);
+    if (!persona || !mechanics || committed) return;
+    const id = window.setInterval(() => damageMH(mechanics.drainPerTick), mechanics.drainIntervalMs);
     return () => window.clearInterval(id);
-  }, [persona, committed, damageMH]);
+  }, [persona, mechanics, committed, damageMH]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [bubbles]);
 
-  if (!persona) return null;
+  if (!persona || !mechanics) return null;
+
+  const applyCommitOutcome = () => {
+    const { onCommit } = mechanics;
+    setCommitted(true);
+    if (onCommit.damageMh) damageMH(onCommit.damageMh);
+    if (onCommit.restoreMh) restoreMH(onCommit.restoreMh);
+    if (onCommit.bonusItem) addBonusItem(onCommit.bonusItem);
+    setCommittedFooter(onCommit.footer);
+    setBubbles((b) => [...b, { from: 'persona', text: onCommit.followUp }]);
+    navigator.vibrate?.([40, 20, 80]);
+    setTimeout(dismiss, 3000);
+  };
 
   const handleSend = async () => {
     const text = input.trim();
@@ -77,20 +85,13 @@ export function EncounterOverlay() {
       setBubbles((b) => [...b, { from: 'persona', text: reply }]);
       setSignalOk(true);
 
-      if (COMMIT_WORDS.some((w) => text.toLowerCase().includes(w))) {
-        setCommitted(true);
-        restoreMH(COMMIT_REWARD);
-        setBubbles((b) => [
-          ...b,
-          { from: 'persona', text: `🥤 He thrusts a free smoothie into your hands. SALVATION. +${COMMIT_REWARD} MH.` },
-        ]);
-        navigator.vibrate?.([40, 20, 80]);
-        setTimeout(dismiss, 3000);
+      if (mechanics.commitWords.some((w) => text.toLowerCase().includes(w))) {
+        applyCommitOutcome();
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       setSignalOk(false);
-      setBubbles((b) => [...b, { from: 'persona', text: `(the PA crackles… ${msg.slice(0, 60)})` }]);
+      setBubbles((b) => [...b, { from: 'persona', text: `(static… ${msg.slice(0, 60)})` }]);
     } finally {
       setLoading(false);
     }
@@ -131,13 +132,13 @@ export function EncounterOverlay() {
         </div>
 
         {committed ? (
-          <div className="encounter-committed">Blessed be the bulk. 🙌</div>
+          <div className="encounter-committed">{committedFooter}</div>
         ) : (
           <div className="encounter-input-bar">
             <input
               className="encounter-input"
               type="text"
-              placeholder="Say something to Brother Blendon…"
+              placeholder={mechanics.inputPlaceholder}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}

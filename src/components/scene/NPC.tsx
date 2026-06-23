@@ -7,6 +7,7 @@ import { COLLISION_GROUP } from '../../types/state';
 import { registerNpc, unregisterNpc, updateNpcRuntime, type NpcPatrolAxis } from '../../systems/npcRegistry';
 import { useSampleStationStore } from '../../stores/sampleStationStore';
 import { useCartTransformStore } from '../../stores/cartTransformStore';
+import { useEncounterStore } from '../../stores/encounterStore';
 import { useGameStore } from '../../stores/gameStore';
 import { getNpcObstacleExtents, getNpcMovementObstacles } from '../../systems/staticObstacles';
 import { NavAgent } from '../../systems/NavAgent';
@@ -102,7 +103,7 @@ export function NPC({ config }: NPCProps) {
     const body = bodyRef.current;
     const agent = agentRef.current;
     if (!body || !agent) return;
-    if (useGameStore.getState().showPhoneInterlude) return;
+    if (useGameStore.getState().showPhoneInterlude || useEncounterStore.getState().active) return;
 
     const position = body.translation();
     const phase = useGameStore.getState().phase;

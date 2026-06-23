@@ -3,8 +3,9 @@ import { useFrame } from '@react-three/fiber';
 import { RigidBody, type RapierRigidBody, interactionGroups } from '@react-three/rapier';
 import * as THREE from 'three';
 import { useCartInput, getCartInput } from '../../hooks/useCartInput';
-import { usePlayerStore } from '../../stores/playerStore';
+import { useEncounterStore } from '../../stores/encounterStore';
 import { useGameStore } from '../../stores/gameStore';
+import { usePlayerStore } from '../../stores/playerStore';
 import { useCheckoutStore } from '../../stores/checkoutStore';
 import { pickSampleLine, useSampleStationStore, SAMPLE_MH_RESTORE } from '../../stores/sampleStationStore';
 import { useUIStore } from '../../stores/uiStore';
@@ -97,7 +98,7 @@ export function ShoppingCart() {
   useFrame((_, delta) => {
     const game = useGameStore.getState();
     if (game.phase !== 'PARKING' && game.phase !== 'SHOPPING' && game.phase !== 'CHECKOUT') return;
-    if (game.showPhoneInterlude) return;
+    if (game.showPhoneInterlude || useEncounterStore.getState().active) return;
 
     const teleport = useCartTransformStore.getState().takeTeleport();
     if (teleport) {

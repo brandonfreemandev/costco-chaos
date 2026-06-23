@@ -2,14 +2,14 @@ import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Billboard, Text } from '@react-three/drei';
 import * as THREE from 'three';
-import { useCartTransformStore } from '../../stores/cartTransformStore';
-import { useEncounterStore } from '../../stores/encounterStore';
+import { useEncounterProximityTrigger } from '../../systems/encounterProximity';
+import { SimpleFace } from './EncounterAvatar';
 
 /** Demo booth location — center court, where the cart passes through. */
 const BOOTH = { x: 0, z: -2 } as const;
 const TRIGGER_RADIUS = 4.2;
 const SKIN = '#d8a878';
-const ROBE = '#7c3aed'; // purple "vestments"
+const ROBE = '#7c3aed';
 
 /** One PA speaker on a pole, angled to face outward from the booth. */
 function PASpeaker({ angle, radius }: { angle: number; radius: number }) {
@@ -54,10 +54,7 @@ function ProphetAvatar() {
         <meshStandardMaterial color={ROBE} roughness={0.7} />
       </mesh>
       {/* Head */}
-      <mesh castShadow position={[0, 1.5, 0]}>
-        <sphereGeometry args={[0.26, 20, 16]} />
-        <meshStandardMaterial color={SKIN} roughness={0.8} />
-      </mesh>
+      <SimpleFace skinTone={SKIN} hairColor="#5a4030" hairStyle="short" expression="smile" />
 
       {/* Headset band over the head */}
       <mesh position={[0, 1.66, 0]} rotation={[0, 0, Math.PI / 2]}>
@@ -98,17 +95,11 @@ function ProphetAvatar() {
 }
 
 export function VitamixBooth() {
-  const triggered = useRef(false);
-  const probe = useRef(new THREE.Vector3());
-
-  useFrame(() => {
-    if (triggered.current) return;
-    const p = useCartTransformStore.getState().position;
-    probe.current.set(p.x - BOOTH.x, 0, p.z - BOOTH.z);
-    if (probe.current.length() <= TRIGGER_RADIUS) {
-      triggered.current = true;
-      useEncounterStore.getState().trigger('vitamix-prophet');
-    }
+  useEncounterProximityTrigger({
+    personaId: 'vitamix-prophet',
+    x: BOOTH.x,
+    z: BOOTH.z,
+    radius: TRIGGER_RADIUS,
   });
 
   return (
